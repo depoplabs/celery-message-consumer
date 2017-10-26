@@ -1,0 +1,4 @@
+configloader[attrdict,yaml]>=1.0.1,<1.1
+wrapt>=1.10,<2.0
+typing>=3.6.2,<4.0
+six

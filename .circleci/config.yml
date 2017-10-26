@@ -1,0 +1,69 @@
+version: 2.0
+
+jobs:
+  "python-2.7":
+    docker:
+      - image: circleci/python:2.7
+        environment:
+          - EVENT_CONSUMER_APP_CONFIG: test_app.settings
+          - BROKER_HOST: localhost
+      - image: circleci/rabbitmq:3.6.6
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+      - run:
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            pip install tox
+      - save_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          paths:
+            - "venv"
+      - run:
+          command: |
+            . venv/bin/activate
+            tox -e py27-dj14-cel3,py27-dj14-cel4,py27-dj111-cel3,py27-dj111-cel4
+      - store_test_results:
+          path: /tmp/pytest.xml
+      - store_artifacts:
+          path: /tmp/pytest.xml
+          destination: python-2.7
+
+  "python-3.6":
+    docker:
+      - image: circleci/python:3.6
+        environment:
+          - EVENT_CONSUMER_APP_CONFIG: test_app.settings
+          - BROKER_HOST: localhost
+      - image: circleci/rabbitmq:3.6.6
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+      - run:
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install tox
+      - save_cache:
+          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          paths:
+            - "venv"
+      - run:
+          command: |
+            . venv/bin/activate
+            tox -e py36-dj111-cel3,py36-dj111-cel4
+      - store_test_results:
+          path: /tmp/pytest.xml
+      - store_artifacts:
+          path: /tmp/pytest.xml
+          destination: python-3.6
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - python-2.7
+      - python-3.6
