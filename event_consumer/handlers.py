@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 
 
 # Maps routing-keys to callables
-REGISTRY = {}  # type: Dict[str, Callable[Dict[str, Any], None]]
+REGISTRY = {}  # type: Dict[str, Callable[[Dict[str, Any]], None]]
 
 DEFAULT_EXCHANGE = 'default'
 
