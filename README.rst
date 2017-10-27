@@ -95,6 +95,9 @@ Some useful config keys (all of which are prefixed with
 -  ``SERIALIZER`` this is the name of a Celery serializer name, e.g.
    ``'json'``. The consumer will only accept messages serialized in this
    format.
+-  ``QUEUE_NAME_PREFIX`` if using default queue name (routing-key) then
+   this prefix will be added to the queue name. If you supply a custom
+   queue name in the handler decorator the prefix will not be applied.
 -  ``MAX_RETRIES`` defaults to ``4`` (i.e. 1 attempt + 4 retries = 5
    strikes)
 -  ``BACKOFF_FUNC`` takes a function ``(int) -> float`` which returns

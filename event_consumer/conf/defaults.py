@@ -16,6 +16,8 @@ CONFIG_NAMESPACE = 'EVENT_CONSUMER'  # type: str
 # import path to obj to get config keys from
 APP_CONFIG = None  # type: Optional[str]
 
+QUEUE_NAME_PREFIX = ''  # type: str
+
 MAX_RETRIES = 4  # type: int
 
 # By default will use `AMQPRetryHandler.backoff`, otherwise supply your own.
