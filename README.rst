@@ -37,6 +37,14 @@ function, in much the same way as you would a Celery task:
         # `body` has been deserialized for us by the Celery worker
         print(body)
 
+    @message_handler(['my.routing.key1', 'my.routing.key2'])
+    def process_messages(body):
+        # you can register handler for multiple routing keys
+
+    @message_handler('my.routing.*')
+    def process_all_messages(body):
+        # or wildcard routing keys, if using a 'topic' exchange
+
 Like a Celery task, the module it is defined in must actually get
 imported at some point for the handler to be registered.
 
@@ -229,6 +237,12 @@ provided.
 
 (adjust the last line to suit your local Docker installation)
 
+The ``rabbitmqadmin`` web UI is available to aid in debugging queue issues:
+
+.. code:: bash
+
+    http://{BROKER_HOST}:15672/
+
 Now decide which version combination from the matrix you're going to
 test and set up your virtualenv accordingly:
 
@@ -245,11 +259,12 @@ you can install everything via:
     pip install -r requirements-test.txt
 
 Set an env to point to the target Django version's settings in the test
-app:
+app (for Django-dependent tests) and for general app settings:
 
 .. code:: bash
 
     export DJANGO_SETTINGS_MODULE=test_app.dj111.settings
+    export EVENT_CONSUMER_APP_CONFIG=test_app.settings
 
 Now we can run the tests:
 
