@@ -11,14 +11,14 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          key: py27-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
       - run:
           command: |
             virtualenv venv
             . venv/bin/activate
             pip install tox
       - save_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          key: py27-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
           paths:
             - "venv"
       - run:
@@ -41,14 +41,14 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          key: py36-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
       - run:
           command: |
             python -m venv venv
             . venv/bin/activate
             pip install tox
       - save_cache:
-          key: deps1-{{ .Branch }}-{{ checksum "test_requirements.txt" }}
+          key: py36-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
           paths:
             - "venv"
       - run:
