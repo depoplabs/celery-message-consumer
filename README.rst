@@ -57,8 +57,8 @@ message consumer.
     consumer_app = Celery()
     consumer_app.steps['consumer'].add(AMQPRetryConsumerStep)
 
-You likely will want separate config for each app. See `Celery
-docs <http://docs.celeryproject.org/en/latest/userguide/application.html#configuration>`__.
+You likely will want separate config for each app. See
+`Celery docs <http://docs.celeryproject.org/en/latest/userguide/application.html#configuration>`__.
 
 In the config for your message consumer app, add the modules containing
 your decorated message handler functions to ``CELERY_IMPORTS``, exactly
@@ -255,9 +255,10 @@ tox (all version combinations for current Python)
 You'll notice in the CircleCI config we run tests against the matrix
 dependency versions using ``tox``.
 
-There are some warts around using ``tox`` with ``pyenv-virtualenv`` so
-if you created a Python 3.6 virtualenv using the instructions above the
-best thing to do is delete it and recreate it like this:
+There are `some warts <https://github.com/pyenv/pyenv-virtualenv/issues/202#issuecomment-339624649>`__
+around using ``tox`` with ``pyenv-virtualenv`` so if you created a Python 3.6
+virtualenv using the instructions above the best thing to do is delete it and
+recreate it like this:
 
 .. code:: bash
 
@@ -282,10 +283,14 @@ python version, e.g.
 
     tox -e py36-dj111-cel4
 
-If you are not in a virtualenv and have a global ``tox`` install (and
-you have Python 2.7 and 3.6 both installed e.g. via ``pyenv``) then you
-can run the full version matrix like:
+To run the full version matrix you need to have both Python 2.7 and 3.6. The
+easiest way is via ``pyenv``. You will also need to make both Python versions
+'global' (or 'local') via pyenv, and then install and run ``tox`` outside of
+any virtualenv.
 
 .. code:: bash
 
+    source deactivate
+    pyenv global 2.7.14 3.6.2
+    pip install tox
     tox

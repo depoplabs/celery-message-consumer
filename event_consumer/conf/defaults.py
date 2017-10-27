@@ -20,7 +20,7 @@ MAX_RETRIES = 4  # type: int
 
 # By default will use `AMQPRetryHandler.backoff`, otherwise supply your own.
 # Should accept a single arg <retry number> and return a delay time (seconds).
-BACKOFF_FUNC = None  # type: Optional[Callable[[int], float]
+BACKOFF_FUNC = None  # type: Optional[Callable[[int], float]]
 
 RETRY_HEADER = 'x-retry-count'  # type: str
 # to generate TTL header for archived message (milliseconds)
