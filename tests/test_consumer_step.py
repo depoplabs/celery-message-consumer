@@ -3,6 +3,7 @@ import pytest
 
 from event_consumer import message_handler
 from event_consumer import handlers as ec
+from event_consumer.test_utils.override import override_settings
 from event_consumer.types import QueueRegistration
 
 
@@ -40,7 +41,7 @@ def test_get_handlers_with_defaults():
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
-@mock.patch.dict(ec.settings, QUEUE_NAME_PREFIX='myapp:')
+@override_settings(QUEUE_NAME_PREFIX='myapp:')
 def test_get_handlers_queue_prefix(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
@@ -79,7 +80,7 @@ def test_get_handlers_queue_prefix(*mocks):
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
-@mock.patch.dict(ec.settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
+@override_settings(EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_queue_and_exchange(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`

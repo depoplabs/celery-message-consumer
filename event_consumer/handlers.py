@@ -43,7 +43,8 @@ def message_handler(routing_key, queue=None, exchange=DEFAULT_EXCHANGE):
         routing_key (str): The routing key of messages to be handled by the
             decorated task.
         queue (Optional[str]): The name of the main queue from which messages
-            will be consumed. Defaults to `routing_key` if not supplied.
+            will be consumed. Defaults to '{QUEUE_NAME_PREFIX}{routing_key}`
+            if not supplied.
         exchange (str): The AMQP exchange config to use. This is a *key name*
             in the `settings.EXCHANGES` dict.
 
@@ -61,7 +62,7 @@ def message_handler(routing_key, queue=None, exchange=DEFAULT_EXCHANGE):
     """
     def decorator(f):
         global REGISTRY
-        queue_name = routing_key if queue is None else (settings.QUEUE_NAME_PREFIX + queue)
+        queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
         register_key = QueueRegistration(routing_key, queue_name, exchange)
         existing = REGISTRY.get(register_key, None)
         if existing is not None and existing is not f:
