@@ -35,6 +35,23 @@ REGISTRY = {}  # type: Dict[QueueRegistration, Callable]
 DEFAULT_EXCHANGE = 'default'
 
 
+def _validate_registration(register_key):  # type: (QueueRegistration) -> None
+    """
+    Raises:
+        InvalidQueueRegistration
+    """
+    global REGISTRY
+    existing = {(r.queue, r.exchange) for r in REGISTRY.keys()}
+    if (register_key.queue, register_key.exchange) in existing:
+        raise InvalidQueueRegistration(
+            'Attempted duplicate registrations for messages with the queue name '
+            '"{0}" and exchange "{1}"'.format(
+                register_key.queue,
+                register_key.exchange,
+            )
+        )
+
+
 def message_handler(routing_keys,  # type: Union[str, Iterable]
                     queue=None,  # type: Optional[str]
                     exchange=DEFAULT_EXCHANGE  # type: str
@@ -65,6 +82,9 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
     Returns:
         Callable: function decorator
 
+    Raises:
+        InvalidQueueRegistration
+
     Usage:
         @message_handler('my.routing.key', 'my.queue', 'my.exchange')
         def process_message(body):
@@ -90,17 +110,11 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
         for routing_key in routing_keys:
             queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
 
+            # kombu.Consumer has no concept of routing-key (only queue name) so
+            # so handler registrations must be unique on queue+exchange (otherwise
+            # messages from the queue would be randomly sent to the duplicate handlers)
             register_key = QueueRegistration(routing_key, queue_name, exchange)
-            existing = REGISTRY.get(register_key, None)
-            if existing is not None and existing is not f:
-                raise Exception(
-                    'Multiple registrations for messages with the routing key '
-                    '"{0}" queue "{1}" and exchange "{2}"'.format(
-                        routing_key,
-                        queue,
-                        exchange,
-                    )
-                )
+            _validate_registration(register_key)
 
             REGISTRY[register_key] = f
 

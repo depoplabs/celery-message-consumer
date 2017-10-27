@@ -143,10 +143,9 @@ def test_get_handlers_no_exchange():
             step.get_handlers(channel=mock.MagicMock())
 
 
-def test_get_handlers_same_queue_name():
+def test_get_handlers_same_queue_name_and_exchange():
     """
-    Should build handlers from tasks decorated with `@message_handler`
-    and use defaults for routing key and exchange if none provided
+    Attempt to attach handler with same queue name + exchange should fail.
     """
     with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
 
@@ -154,14 +153,14 @@ def test_get_handlers_same_queue_name():
         def f1(body):
             return None
 
-        @message_handler('my.routing.key2', queue='custom_queue', exchange='custom')
-        def f2(body):
-            return None
+        with pytest.raises(InvalidQueueRegistration):
+            @message_handler('my.routing.key2', queue='custom_queue', exchange='custom')
+            def f2(body):
+                return None
 
-        assert len(reg) == 2
+        assert len(reg) == 1
 
         assert f1 is reg[QueueRegistration('my.routing.key1', 'custom_queue', 'custom')]
-        assert f2 is reg[QueueRegistration('my.routing.key2', 'custom_queue', 'custom')]
 
         step = ec.AMQPRetryConsumerStep(None)
         handlers = step.get_handlers(channel=mock.MagicMock())
