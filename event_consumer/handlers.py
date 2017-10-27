@@ -61,7 +61,7 @@ def message_handler(routing_key, queue=None, exchange=DEFAULT_EXCHANGE):
     """
     def decorator(f):
         global REGISTRY
-        queue_name = routing_key if queue is None else queue
+        queue_name = routing_key if queue is None else (settings.QUEUE_NAME_PREFIX + queue)
         register_key = QueueRegistration(routing_key, queue_name, exchange)
         existing = REGISTRY.get(register_key, None)
         if existing is not None and existing is not f:

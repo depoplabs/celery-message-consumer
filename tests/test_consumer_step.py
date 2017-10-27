@@ -40,6 +40,45 @@ def test_get_handlers_with_defaults():
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
+@mock.patch.dict(ec.settings, QUEUE_NAME_PREFIX='myapp:')
+def test_get_handlers_queue_prefix(*mocks):
+    """
+    Should build handlers from tasks decorated with `@message_handler`
+    and use defaults for routing key and exchange if none provided
+    """
+    with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
+
+        @message_handler('my.routing.key1')
+        def f1(body):
+            return None
+
+        @message_handler('my.routing.key2')
+        def f2(body):
+            return None
+
+        assert len(reg) == 2
+
+        assert f1 is reg[
+            QueueRegistration('my.routing.key1', 'myapp:my.routing.key1', 'default')
+        ]
+        assert f2 is reg[
+            QueueRegistration('my.routing.key2', 'myapp:my.routing.key2', 'default')
+        ]
+
+        step = ec.AMQPRetryConsumerStep(None)
+        handlers = step.get_handlers(channel=mock.MagicMock())
+
+        assert len(handlers) == len(reg)
+
+        for handler in handlers:
+            assert isinstance(handler, ec.AMQPRetryHandler)
+            assert len(handler.consumer.queues) == 1
+            assert len(handler.consumer.callbacks) == 1
+            assert isinstance(handler.consumer.callbacks[0], ec.AMQPRetryHandler)
+            key = (handler.routing_key, handler.queue, handler.exchange)
+            assert handler.consumer.callbacks[0].func is reg[key]
+
+
 @mock.patch.dict(ec.settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_queue_and_exchange(*mocks):
     """
