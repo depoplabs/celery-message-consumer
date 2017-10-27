@@ -1,6 +1,11 @@
 celery-message-consumer
 =======================
 
+|Build Status|
+
+.. |Build Status| image:: https://circleci.com/gh/depop/celery-message-consumer.svg?style=shield&circle-token=a9ea2909c5cbc4cb32a87f50444ca79b99e3b09c
+    :alt: Build Status
+
 Tool for using the ``bin/celery`` worker to consume vanilla AMQP
 messages (i.e. not Celery tasks)
 
