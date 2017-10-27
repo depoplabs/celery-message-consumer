@@ -26,3 +26,10 @@ class NoExchange(Exception):
     Raised if during the instantiation of an AMQPRetryHandler the requested
     exchange has not been defined in settings.EXCHANGES
     """
+
+
+class InvalidQueueRegistration(Exception):
+    """
+    Raised if you try to connect a message handler with a combination of
+    queue and exchange that cannot work.
+    """

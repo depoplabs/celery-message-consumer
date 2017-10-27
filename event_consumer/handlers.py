@@ -9,15 +9,17 @@ loaded by the bin/celery worker itself, according to usual mechanism.
 import logging
 import traceback
 
-from typing import Any, Callable, Dict, List, Optional  # noqa
+import six
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union  # noqa
 
+import amqp  # noqa
 import celery.bootsteps as bootsteps
 import kombu
 import kombu.message
 import kombu.common as common
 
 from event_consumer.conf import settings
-from event_consumer.errors import NoExchange, PermanentFailure
+from event_consumer.errors import InvalidQueueRegistration, NoExchange, PermanentFailure
 from event_consumer.types import QueueRegistration
 
 if settings.USE_DJANGO:
@@ -27,29 +29,41 @@ if settings.USE_DJANGO:
 _logger = logging.getLogger(__name__)
 
 
-# Maps routing-keys to callables
-REGISTRY = {}  # type: Dict[str, Callable[[Dict[str, Any]], None]]
+# Maps routing-keys to handlers
+REGISTRY = {}  # type: Dict[QueueRegistration, Callable]
 
 DEFAULT_EXCHANGE = 'default'
 
 
-def message_handler(routing_key, queue=None, exchange=DEFAULT_EXCHANGE):
+def message_handler(routing_keys,  # type: Union[str, Iterable]
+                    queue=None,  # type: Optional[str]
+                    exchange=DEFAULT_EXCHANGE  # type: str
+                    ):
+    # type: (...) ->  Callable[[Callable], Any]
     """
     Register a function as a handler for messages on a rabbitmq exchange with
     the given routing-key. Default behaviour is to use `routing_key` as the
-    queue name and attach it to the 'data' topic exchange
+    queue name and attach it to the 'default' exchange. If this key is not
+    present in `settings.EXCHANGES` with your own config then you will get the
+    underlying AMQP default exchange - this has some restrictions (you cannot
+    bind custom queue names, only auto-bound same-as-routing-key queues are
+    possible).Kwargs
+
+    Otherwise Queues and Exchanges are automatically created on the broker
+    by Kombu and you don't have to worry about it.
 
     Kwargs:
-        routing_key (str): The routing key of messages to be handled by the
+        routing_keys: The routing key/s of messages to be handled by the
             decorated task.
-        queue (Optional[str]): The name of the main queue from which messages
+        queue: The name of the main queue from which messages
             will be consumed. Defaults to '{QUEUE_NAME_PREFIX}{routing_key}`
-            if not supplied.
-        exchange (str): The AMQP exchange config to use. This is a *key name*
+            if not supplied. Special case is '' this will give you Kombu
+            default queue name without prepending `QUEUE_NAME_PREFIX`.
+        exchange: The AMQP exchange config to use. This is a *key name*
             in the `settings.EXCHANGES` dict.
 
     Returns:
-        Callable[[Callable], Any]: function decorator
+        Callable: function decorator
 
     Usage:
         @message_handler('my.routing.key', 'my.queue', 'my.exchange')
@@ -60,21 +74,36 @@ def message_handler(routing_key, queue=None, exchange=DEFAULT_EXCHANGE):
     In order for the event handler to be registered, its containing module must
     be imported before starting the AMQPRetryConsumerStep.
     """
-    def decorator(f):
+    if (queue or (queue is None and settings.QUEUE_NAME_PREFIX)) \
+            and exchange not in settings.EXCHANGES:
+        raise InvalidQueueRegistration(
+            "You must use a named exchange from settings.EXCHANGES "
+            "if you want to bind a custom queue name."
+        )
+
+    if isinstance(routing_keys, six.string_types):
+        routing_keys = [routing_keys]
+
+    def decorator(f):  # type: (Callable) -> Callable
         global REGISTRY
-        queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
-        register_key = QueueRegistration(routing_key, queue_name, exchange)
-        existing = REGISTRY.get(register_key, None)
-        if existing is not None and existing is not f:
-            raise Exception(
-                'Multiple registrations for messages with the routing key '
-                '"{0}" queue "{1}" and exchange "{2}"'.format(
-                    routing_key,
-                    queue,
-                    exchange,
+
+        for routing_key in routing_keys:
+            queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
+
+            register_key = QueueRegistration(routing_key, queue_name, exchange)
+            existing = REGISTRY.get(register_key, None)
+            if existing is not None and existing is not f:
+                raise Exception(
+                    'Multiple registrations for messages with the routing key '
+                    '"{0}" queue "{1}" and exchange "{2}"'.format(
+                        routing_key,
+                        queue,
+                        exchange,
+                    )
                 )
-            )
-        REGISTRY[register_key] = f
+
+            REGISTRY[register_key] = f
+
         return f
 
     return decorator
@@ -94,8 +123,8 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
     requires = ('celery.worker.consumer:Connection', )
 
     def __init__(self, *args, **kwargs):
-        self.handlers = []
-        self._tasks = kwargs.pop('tasks', REGISTRY)
+        self.handlers = []  # type: List[AMQPRetryHandler]
+        self._tasks = kwargs.pop('tasks', REGISTRY)  # type: Dict[QueueRegistration, Callable]
         super(AMQPRetryConsumerStep, self).__init__(*args, **kwargs)
 
     def start(self, c):
@@ -146,11 +175,19 @@ class AMQPRetryHandler(object):
     backoff on retries.
     """
 
-    def __init__(self, channel, routing_key, queue, exchange, func, backoff_func=None):
+    def __init__(self,
+                 channel,  # type: amqp.channel.Channel
+                 routing_key,  # type: str
+                 queue,  # type: str
+                 exchange,  # type: str
+                 func,  # type: Callable[[Any], Any]
+                 backoff_func=None  # type: Optional[Callable[[int], float]]
+                 ):
+        # type: (...) -> None
         self.channel = channel
         self.routing_key = routing_key
-        self.queue = queue
-        self.exchange = exchange
+        self.queue = queue  # queue name
+        self.exchange = exchange  # `settings.EXCHANGES` config key
         self.func = func
         self.backoff_func = backoff_func or self.backoff
 
