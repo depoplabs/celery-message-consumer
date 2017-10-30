@@ -14,7 +14,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.3',
+    version='1.0.4',
 
     description='Tool for using the bin/celery worker to consume vanilla AMQP messages (i.e. not Celery tasks)',
     long_description=long_description,
@@ -34,10 +34,12 @@ setup(
         'Framework :: Celery',
     ],
     install_requires=[
-        'configloader[attrdict,yaml]>=1.0.1,<1.1',
-        'wrapt>=1.10,<2.0',
+        'flexisettings>=1.0,<1.1',
         'typing>=3.6.2,<4.0',
         'six',
+    ],
+    dependence_links=[
+        'git+https://github.com/depop/python-flexisettings.git@1.0.0#egg=flexisettings',
     ],
 
     packages=[
