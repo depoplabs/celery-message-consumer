@@ -25,10 +25,8 @@ jobs:
           command: |
             . venv/bin/activate
             tox -e py27-dj14-cel3,py27-dj14-cel4,py27-dj111-cel3,py27-dj111-cel4
-      - store_test_results:
-          path: /tmp/pytest.xml
       - store_artifacts:
-          path: /tmp/pytest.xml
+          path: /tmp/results
           destination: python-2.7
 
   "python-3.6":
@@ -55,10 +53,8 @@ jobs:
           command: |
             . venv/bin/activate
             tox -e py36-dj111-cel3,py36-dj111-cel4
-      - store_test_results:
-          path: /tmp/pytest.xml
       - store_artifacts:
-          path: /tmp/pytest.xml
+          path: /tmp/results
           destination: python-3.6
 
 workflows:
