@@ -1,7 +1,4 @@
-from contextlib import contextmanager
-import os
 import random
-import socket
 import unittest
 
 from six.moves import string_letters
@@ -181,13 +178,3 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
             for handler in self.handlers
             if handler.routing_key == routing_key
         ]
-
-
-@contextmanager
-def override_environment(**kwargs):
-    old_env = os.environ
-    new_env = os.environ.copy()
-    new_env.update(kwargs)
-    os.environ = new_env
-    yield
-    os.environ = old_env

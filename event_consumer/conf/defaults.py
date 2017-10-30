@@ -1,5 +1,13 @@
 from datetime import timedelta
+import os
 from typing import Callable, Dict, List, Optional  # noqa
+
+
+# namespace for config keys loaded from e.g. Django conf or env vars
+CONFIG_NAMESPACE = os.getenv('EVENT_CONSUMER_CONFIG_NAMESPACE', 'EVENT_CONSUMER')
+
+# optional import path to file containing namespaced config (e.g. 'django.conf.settings')
+APP_CONFIG = os.getenv('EVENT_CONSUMER_APP_CONFIG', None)
 
 
 # safety var to prevent accidentally enabling the handlers in `test_utils.handlers`
@@ -9,12 +17,6 @@ TEST_ENABLED = False
 # http://docs.celeryproject.org/en/latest/userguide/configuration.html#std:setting-task_serializer
 SERIALIZER = 'json'
 ACCEPT = [SERIALIZER]
-
-# namespace for config keys loaded from Django conf or env vars
-CONFIG_NAMESPACE = 'EVENT_CONSUMER'
-
-# import path to obj to get config keys from
-APP_CONFIG = None  # type: Optional[str]
 
 QUEUE_NAME_PREFIX = ''
 
