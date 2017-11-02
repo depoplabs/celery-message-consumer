@@ -38,8 +38,8 @@ setup(
         'typing>=3.6.2,<4.0',
         'six',
     ],
-    dependence_links=[
-        'git+https://github.com/depop/python-flexisettings.git@1.0.0#egg=flexisettings',
+    dependency_links=[
+        'git+https://github.com/depop/python-flexisettings.git@1.0.0#egg=flexisettings-1.0.0',
     ],
 
     packages=[
