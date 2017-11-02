@@ -103,6 +103,13 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
 
     if isinstance(routing_keys, six.string_types):
         routing_keys = [routing_keys]
+    else:
+        if queue is not None:
+            raise InvalidQueueRegistration(
+                "We need a queue-per-routing-key so you can't specify a "
+                "custom queue name when attaching mutiple routes. Use "
+                "separate handlers for each routing key in this case."
+            )
 
     def decorator(f):  # type: (Callable) -> Callable
         global REGISTRY
@@ -125,7 +132,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
 
 class AMQPRetryConsumerStep(bootsteps.StartStopStep):
     """
-    This an integration hook with Celery adapted from the built in class
+    An integration hook with Celery which is adapted from the built in class
     `bootsteps.ConsumerStep`. Instead of registering a `kombu.Consumer` on
     startup, we create instances of `AMQPRetryHandler` passing in a channel
     which is used to create all the queues/exchanges/etc. needed to
@@ -181,7 +188,7 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
 
 class AMQPRetryHandler(object):
     """
-    This implements Depop's try-retry-archive message queue pattern.
+    Implements Depop's try-retry-archive message queue pattern.
 
     Briefly - messages are processed and may be retried by placing them on a separate retry
     queue on a dead-letter-exchange. Messages on the DLX are automatically re-queued by Rabbit
@@ -279,14 +286,14 @@ class AMQPRetryHandler(object):
 
     def __call__(self, body, message):
         """
-        This is the main Kombu message handler for vanilla AMQP messages.
+        Handle a vanilla AMQP message, called by the Celery framework.
 
         Raising an exception in this method will crash the Celery worker. Ensure
         that all Exceptions are caught and messages acknowledged or rejected
         as they are processed.
 
         Args:
-            body (Any): the message content, which has been deserialized by Celery
+            body (Any): the message content, which has been deserialized by Kombu
             message (kombu.message.Message)
 
         Returns:
