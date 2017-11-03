@@ -7,7 +7,7 @@ import kombu.common as common
 import kombu
 
 from event_consumer.conf import settings
-from event_consumer.handlers import AMQPRetryHandler, AMQPRetryConsumerStep
+from event_consumer.handlers import AMQPRetryHandler, AMQPRetryConsumerStep, DEFAULT_EXCHANGE
 
 
 def random_body():
@@ -46,17 +46,12 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
         )
         self.handler.declare_queues()
 
-        queues = [
-            self.handler.worker_queue,
-            self.handler.retry_queue,
-            self.handler.archive_queue,
-        ]
-        for queue in queues:
+        for queue in self.handler.queues.values():
             queue.purge()
 
         self.archive_consumer = kombu.Consumer(
             channel=self.channel,
-            queues=[self.handler.archive_queue],
+            queues=[self.handler.queues[AMQPRetryHandler.ARCHIVE]],
             callbacks=[self.handle_archive]
         )
 
@@ -72,24 +67,20 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
         self.archives = []
 
     def tearDown(self):
-        queues = [
-            self.handler.worker_queue,
-            self.handler.retry_queue,
-            self.handler.archive_queue,
-        ]
-
         for consumer in [self.handler.consumer, self.archive_consumer]:
             common.ignore_errors(self.connection, consumer.cancel)
 
-        for queue in queues:
+        for queue in self.handler.queues.values():
             # Carefully delete test queues which must be empty and have no consumers running.
             queue.delete(
                 if_unused=True,
                 if_empty=True,
             )
 
-        for name, exchange_settings in settings.EXCHANGES.items():
-            self.handler.exchanges[name].delete(if_unused=True)
+        for exchange in self.handler.exchanges.values():
+            if not exchange.name:
+                continue
+            exchange.delete(if_unused=True)
 
         self.connection.close()
         super(BaseRetryHandlerIntegrationTest, self).tearDown()
@@ -128,12 +119,7 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
         for handler in self.handlers:
             handler.declare_queues()
 
-            queues = [
-                handler.worker_queue,
-                handler.retry_queue,
-                handler.archive_queue,
-            ]
-            for queue in queues:
+            for queue in handler.queues.values():
                 queue.purge()
 
             handler.consumer.consume()
@@ -146,20 +132,17 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
             # Carefully delete test queues and exchanges
             # We require them to be empty and unbound to be sure all our cleanup
             # is being done correctly (i.e. nothing got left behind by mistake)
-            queues = [
-                handler.worker_queue,
-                handler.retry_queue,
-                handler.archive_queue,
-            ]
-            for queue in queues:
+            for queue in handler.queues.values():
                 queue.delete(
                     if_unused=True,
                     if_empty=True,
                 )
 
         for handler in self.handlers:
-            for name, exchange_settings in settings.EXCHANGES.items():
-                handler.exchanges[name].delete(if_unused=True)
+            for exchange in handler.exchanges.values():
+                if not exchange.name:
+                    continue
+                exchange.delete(if_unused=True)
 
         self.connection.close()
         super(BaseConsumerIntegrationTest, self).tearDown()

@@ -1,7 +1,9 @@
-from collections import namedtuple
+from typing import NamedTuple
+
 
 # Used by handlers.REGISTRY as keys
-QueueRegistration = namedtuple(
-    'QueueRegistration',
-    ['routing_key', 'queue', 'exchange']
-)
+QueueRegistration = NamedTuple('QueueRegistration', [
+    ('routing_key', str),
+    ('queue', str),
+    ('exchange', str)
+])

@@ -10,7 +10,7 @@ import logging
 import traceback
 
 import six
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union  # noqa
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Union  # noqa
 
 import amqp  # noqa
 import celery.bootsteps as bootsteps
@@ -32,7 +32,10 @@ _logger = logging.getLogger(__name__)
 # Maps routing-keys to handlers
 REGISTRY = {}  # type: Dict[QueueRegistration, Callable]
 
-DEFAULT_EXCHANGE = 'default'
+# Map of exchange name to registered queues
+QUEUE_NAMES = {}  # type: Dict[str, Set[str]]
+
+DEFAULT_EXCHANGE = 'default'  # key in settings.EXCHANGES
 
 
 def _validate_registration(register_key):  # type: (QueueRegistration) -> None
@@ -112,7 +115,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             )
 
     def decorator(f):  # type: (Callable) -> Callable
-        global REGISTRY
+        global REGISTRY, QUEUE_NAMES
 
         for routing_key in routing_keys:
             queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
@@ -124,6 +127,17 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             _validate_registration(register_key)
 
             REGISTRY[register_key] = f
+
+            names_ = QUEUE_NAMES.setdefault(exchange, set())
+            for name_ in AMQPRetryHandler.queue_names_for(queue_name):
+                if name_ in names_:
+                    raise InvalidQueueRegistration(
+                        "Queue name '{}' is already registered to exchange '{}'".format(
+                            name_,
+                            exchange
+                        )
+                    )
+                names_.add(name_)
 
         return f
 
@@ -172,7 +186,9 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
         for channel in channels:
             common.ignore_errors(c.connection, channel.close)
 
+    # custom methods:
     def get_handlers(self, channel):
+        # type (channel: kombu.transport.base.StdChannel) -> List[AMQPRetryHandler]
         return [
             AMQPRetryHandler(
                 channel,
@@ -196,6 +212,19 @@ class AMQPRetryHandler(object):
     backoff on retries.
     """
 
+    WORKER = 'worker'
+    RETRY = 'retry'
+    ARCHIVE = 'archive'
+
+    QUEUE_NAME_FORMATS = {
+        WORKER: '{}',
+        RETRY: '{}.retry',
+        ARCHIVE: '{}.archived',
+    }
+
+    exchanges = None  # type: Dict[str, kombu.Exchange]
+    queues = None  # type: Dict[str, kombu.Queue]
+
     def __init__(self,
                  channel,  # type: amqp.channel.Channel
                  routing_key,  # type: str
@@ -212,77 +241,92 @@ class AMQPRetryHandler(object):
         self.func = func
         self.backoff_func = backoff_func or self.backoff
 
-        self.exchanges = {
-            DEFAULT_EXCHANGE: kombu.Exchange(channel=self.channel)
-        }
-
-        for name, exchange_settings in settings.EXCHANGES.items():
-            self.exchanges[name] = kombu.Exchange(
-                channel=self.channel,
-                **exchange_settings
-            )
-
-        try:
-            self.worker_queue = kombu.Queue(
-                name=self.queue,
-                exchange=self.exchanges[exchange],
-                routing_key=self.routing_key,
-                channel=self.channel,
-            )
-
-            self.retry_queue = kombu.Queue(
-                name='{0}.retry'.format(queue),
-                exchange=self.exchanges[DEFAULT_EXCHANGE],
-                routing_key='{0}.retry'.format(queue),
-                # N.B. default exchange automatically routes messages to a queue
-                # with the same name as the routing key provided.
-                queue_arguments={
-                    "x-dead-letter-exchange": "",
-                    "x-dead-letter-routing-key": self.queue,
-                },
-                channel=self.channel,
-            )
-
-            self.archive_queue = kombu.Queue(
-                name='{0}.archived'.format(queue),
-                exchange=self.exchanges[DEFAULT_EXCHANGE],
-                routing_key='{0}.archived'.format(queue),
-                queue_arguments={
-                    "x-expires": settings.ARCHIVE_EXPIRY,  # Messages dropped after this
-                    "x-max-length": 1000000,  # Maximum size of the queue
-                    "x-queue-mode": "lazy",  # Keep messages on disk (reqs. rabbitmq 3.6.0+)
-                },
-                channel=self.channel,
-            )
-        except KeyError as key_exc:
-            raise NoExchange(
-                "The exchange {0} was not found in settings.EXCHANGES. \n"
-                "settings.EXCHANGES = {1}".format(
-                    key_exc,
-                    settings.EXCHANGES
+        self.exchanges = {}
+        if exchange != DEFAULT_EXCHANGE:
+            try:
+                self.exchanges[exchange] = kombu.Exchange(
+                    channel=self.channel,
+                    **settings.EXCHANGES[exchange]
                 )
+            except KeyError:
+                raise NoExchange(
+                    "The exchange '{0}'' was not found in settings.EXCHANGES. \n"
+                    "settings.EXCHANGES = {1}".format(
+                        exchange,
+                        settings.EXCHANGES
+                    )
+                )
+
+        if DEFAULT_EXCHANGE in settings.EXCHANGES:
+            self.exchanges[DEFAULT_EXCHANGE] = kombu.Exchange(
+                channel=self.channel,
+                **settings.EXCHANGES[DEFAULT_EXCHANGE]
             )
+        else:
+            self.exchanges[DEFAULT_EXCHANGE] = kombu.Exchange(channel=self.channel)
+
+        self.queues = {}
+
+        self.queues[self.WORKER] = kombu.Queue(
+            name=self.QUEUE_NAME_FORMATS[self.WORKER].format(self.queue),
+            exchange=self.exchanges[exchange],
+            routing_key=self.routing_key,
+            channel=self.channel,
+        )
+
+        self.queues[self.RETRY] = kombu.Queue(
+            name=self.QUEUE_NAME_FORMATS[self.RETRY].format(self.queue),
+            exchange=self.exchanges[DEFAULT_EXCHANGE],
+            routing_key='{0}.retry'.format(queue),
+            # N.B. default exchange automatically routes messages to a queue
+            # with the same name as the routing key provided.
+            queue_arguments={
+                "x-dead-letter-exchange": "",
+                "x-dead-letter-routing-key": self.queue,
+            },
+            channel=self.channel,
+        )
+
+        self.queues[self.ARCHIVE] = kombu.Queue(
+            name=self.QUEUE_NAME_FORMATS[self.ARCHIVE].format(self.queue),
+            exchange=self.exchanges[DEFAULT_EXCHANGE],
+            routing_key='{0}.archived'.format(queue),
+            queue_arguments={
+                "x-expires": settings.ARCHIVE_EXPIRY,  # Messages dropped after this
+                "x-max-length": 1000000,  # Maximum size of the queue
+                "x-queue-mode": "lazy",  # Keep messages on disk (reqs. rabbitmq 3.6.0+)
+            },
+            channel=self.channel,
+        )
 
         self.retry_producer = kombu.Producer(
             channel,
-            exchange=self.retry_queue.exchange,
-            routing_key=self.retry_queue.routing_key,
+            exchange=self.queues[self.RETRY].exchange,
+            routing_key=self.queues[self.RETRY].routing_key,
             serializer=settings.SERIALIZER,
         )
 
         self.archive_producer = kombu.Producer(
             channel,
-            exchange=self.archive_queue.exchange,
-            routing_key=self.archive_queue.routing_key,
+            exchange=self.queues[self.ARCHIVE].exchange,
+            routing_key=self.queues[self.ARCHIVE].routing_key,
             serializer=settings.SERIALIZER,
         )
 
         self.consumer = kombu.Consumer(
             channel,
-            queues=[self.worker_queue],
+            queues=[self.queues[self.WORKER]],
             callbacks=[self],
             accept=settings.ACCEPT,
         )
+
+    @classmethod
+    def queue_names_for(cls, queue):
+        # type: (str) -> List[str]
+        return [
+            template.format(queue)
+            for template in cls.QUEUE_NAME_FORMATS.values()
+        ]
 
     def __call__(self, body, message):
         """
@@ -375,7 +419,7 @@ class AMQPRetryHandler(object):
                 body,
                 headers=headers,
                 retry=True,
-                declares=[self.retry_queue],
+                declares=[self.queues[self.RETRY]],
                 expiration=self.backoff_func(retry_count)
             )
         except Exception as e:
@@ -402,7 +446,7 @@ class AMQPRetryHandler(object):
                 body,
                 headers=message.headers,
                 retry=True,
-                declares=[self.archive_queue],
+                declares=[self.queues[self.ARCHIVE]],
             )
 
         except Exception as e:
@@ -420,8 +464,7 @@ class AMQPRetryHandler(object):
             _logger.debug("Archive: {}".format(reason))
 
     def declare_queues(self):
-        queues = [self.worker_queue, self.retry_queue, self.archive_queue]
-        for queue in queues:
+        for queue in self.queues.values():
             queue.declare()
 
     @classmethod
