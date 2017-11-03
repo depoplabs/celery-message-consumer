@@ -1,0 +1,6 @@
+-r requirements-test.txt
+
+ipython
+ipdb
+robpol86-pytest-ipdb
+twine
