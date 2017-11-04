@@ -7,7 +7,8 @@ import kombu.common as common
 import kombu
 
 from event_consumer.conf import settings
-from event_consumer.handlers import AMQPRetryHandler, AMQPRetryConsumerStep, DEFAULT_EXCHANGE
+from event_consumer.bootsteps import AMQPRetryConsumerStep
+from event_consumer.handlers import AMQPRetryHandler
 
 
 def random_body():
@@ -39,8 +40,8 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
         self.handler = AMQPRetryHandler(
             self.channel,
             routing_key=self.routing_key,
-            queue=self.routing_key,
-            exchange=self.exchange,
+            queue_name=self.routing_key,
+            exchange_key=self.exchange,
             func=lambda body: None,
             backoff_func=lambda attempt: 0,
         )
@@ -60,7 +61,7 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
 
         self.producer = kombu.Producer(
             self.channel,
-            exchange=self.handler.exchanges[self.handler.exchange],
+            exchange=self.handler.exchange,
             routing_key=self.routing_key,
             serializer='json'
         )
@@ -77,10 +78,8 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
                 if_empty=True,
             )
 
-        for exchange in self.handler.exchanges.values():
-            if not exchange.name:
-                continue
-            exchange.delete(if_unused=True)
+        if self.handler.exchange.name:
+            self.handler.exchange.delete(if_unused=True)
 
         self.connection.close()
         super(BaseRetryHandlerIntegrationTest, self).tearDown()
@@ -139,10 +138,8 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
                 )
 
         for handler in self.handlers:
-            for exchange in handler.exchanges.values():
-                if not exchange.name:
-                    continue
-                exchange.delete(if_unused=True)
+            if handler.exchange.name:
+                handler.exchange.delete(if_unused=True)
 
         self.connection.close()
         super(BaseConsumerIntegrationTest, self).tearDown()
@@ -150,7 +147,7 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
     def get_producer(self, handler, routing_key=None):
         return kombu.Producer(
             handler.channel,
-            exchange=handler.exchanges[handler.exchange],
+            exchange=handler.exchange,
             routing_key=handler.routing_key if routing_key is None else routing_key,
             serializer='json'
         )

@@ -63,7 +63,7 @@ message consumer.
 .. code:: python
 
     from celery import Celery
-    from event_consumer.handlers import AMQPRetryConsumerStep
+    from event_consumer.bootsteps import AMQPRetryConsumerStep
 
     main_app = Celery()
 
