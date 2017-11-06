@@ -3,7 +3,7 @@ import socket
 import mock
 
 from event_consumer.conf import settings
-from event_consumer import handlers as ec
+from event_consumer.errors import PermanentFailure
 
 from .base import BaseRetryHandlerIntegrationTest
 
@@ -59,7 +59,7 @@ class AMQPRetryHandlerIntegrationTest(BaseRetryHandlerIntegrationTest):
     def test_wrapped_func_raises_permanent_failure_exception(self):
         """Should catch PermanentFailure exceptions and archive these messages"""
         with mock.patch.object(self.handler, 'func') as f:
-            f.side_effect = ec.PermanentFailure('This should be archived first go')
+            f.side_effect = PermanentFailure('This should be archived first go')
             body = self.body()
 
             self.assertEqual(len(self.archives), 0)

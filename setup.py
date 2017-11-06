@@ -43,6 +43,5 @@ setup(
     packages=[
         'event_consumer',
         'event_consumer.conf',
-        'event_consumer.test_utils',
     ],
 )

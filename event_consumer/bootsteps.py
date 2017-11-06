@@ -1,58 +1,91 @@
+import logging
 from typing import Any, Callable, Dict, List  # noqa
 
-import celery.bootsteps as bootsteps
-import kombu  # noqa
-import kombu.common as common
+import celery
+import celery.bootsteps
+import kombu
 
 from event_consumer import handlers as ec_handlers
 from event_consumer.conf import settings
 from event_consumer.types import QueueRegistration  # noqa
 
 
-class AMQPRetryConsumerStep(bootsteps.StartStopStep):
+logger = logging.getLogger(__name__)
+
+
+class ConfigureQueuesStep(celery.bootsteps.Step):
+    """
+    Ensure that worker only listens to the queues that we have registered
+    for our message handlers.
+
+    Blueprint type: 'Worker' step
+
+    The celery app you apply it to must implement our `EventConsumerMixin`
+    """
+
+    def __init__(self, parent, **kwargs):
+        # type: (celery.worker.WorkController, Any) -> None
+        super(ConfigureQueuesStep, self).__init__(parent, **kwargs)
+        # add any queues passed to worker with `-Q --queues` cli option
+        queues = list(parent.app.amqp.queues.keys())
+        queues.extend(parent.app.event_handlers.queue_names)
+        parent.setup_queues(include=queues)
+
+
+class AMQPRetryConsumerStep(celery.bootsteps.StartStopStep):
     """
     An integration hook with Celery which is adapted from the built in class
     `bootsteps.ConsumerStep`. Instead of registering a `kombu.Consumer` on
     startup, we create instances of `AMQPRetryHandler` passing in a channel
-    which is used to create all the queues/exchanges/etc. needed to
+    which is used to create all the queues/exchanges/etc that are needed to
     implement our try-retry-archive scheme.
 
     See http://docs.celeryproject.org/en/latest/userguide/extending.html
+
+    Blueprint type: 'Consumer' step
+
+    The celery app you apply it to must implement our `EventConsumerMixin`
     """
 
     requires = ('celery.worker.consumer:Connection',)
 
     handlers = None  # type: List[ec_handlers.AMQPRetryHandler]
-    _tasks = None  # type: Dict[QueueRegistration, Callable[[Any], None]]
+    _registry = None  # type: Dict[QueueRegistration, Callable[[Any], None]]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, **kwargs):
+        # type: (celery.worker.consumer.Consumer, **Any) -> None
         self.handlers = []
-        self._tasks = kwargs.pop('tasks', ec_handlers.REGISTRY)
-        super(AMQPRetryConsumerStep, self).__init__(*args, **kwargs)
+        self._registry = kwargs.pop('tasks', parent.app.event_handlers.registry)
+        super(AMQPRetryConsumerStep, self).__init__(parent, **kwargs)
 
-    def start(self, c):
-        channel = c.connection.channel()
+    def start(self, parent):
+        # type: (celery.worker.consumer.Consumer) -> None
+        channel = parent.connection.channel()
         self.handlers = self.get_handlers(channel)
 
+        # make it all happen:
         for handler in self.handlers:
             handler.declare_queues()
             handler.consumer.consume()
 
-    def stop(self, c):
-        self._close(c, True)
+    def stop(self, parent):
+        # type: (celery.worker.consumer.Consumer) -> None
+        self._close(parent, True)
 
-    def shutdown(self, c):
-        self._close(c, False)
+    def shutdown(self, parent):
+        # type: (celery.worker.consumer.Consumer) -> None
+        self._close(parent, False)
 
-    def _close(self, c, cancel_consumers=True):
+    def _close(self, parent, cancel_consumers=True):
+        # type: (celery.worker.consumer.Consumer, bool) -> None
         channels = set()
         for handler in self.handlers:
             if cancel_consumers:
-                common.ignore_errors(c.connection, handler.consumer.cancel)
+                kombu.common.ignore_errors(parent.connection, handler.consumer.cancel)
             if handler.consumer.channel:
                 channels.add(handler.consumer.channel)
         for channel in channels:
-            common.ignore_errors(c.connection, channel.close)
+            kombu.common.ignore_errors(parent.connection, channel.close)
 
     # custom methods:
     def get_handlers(self, channel):
@@ -66,5 +99,5 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
                 func,
                 backoff_func=settings.BACKOFF_FUNC,
             )
-            for queue_registration, func in self._tasks.items()
+            for queue_registration, func in self._registry.items()
         ]

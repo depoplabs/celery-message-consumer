@@ -33,6 +33,9 @@ ARCHIVE_EXPIRY = int(timedelta(days=24).total_seconds() * 1000)  # type: int
 
 USE_DJANGO = False
 
+
+DEFAULT_EXCHANGE_KEY = 'default'
+
 EXCHANGES = {}  # type: Dict[str, Dict[str, str]]
 # EXCHANGES = {
 #     'default': {  # a reference name for this config, used when attaching handlers

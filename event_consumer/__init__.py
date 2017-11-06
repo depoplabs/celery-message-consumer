@@ -1,1 +1,1 @@
-from event_consumer.handlers import message_handler  # noqa
+from event_consumer.app import EventConsumerApp  # noqa
