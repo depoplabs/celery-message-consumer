@@ -5,6 +5,9 @@ pytest
 mock
 flaky
 
+# for celery result backend
+sqlalchemy
+
 # note for Django 1.4 you will need specific versions of these
 # (see tox.ini)
 pytest-django

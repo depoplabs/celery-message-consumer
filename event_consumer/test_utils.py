@@ -1,6 +1,5 @@
-from functools import wraps
-
 from configloader import ConfigLoader
+from decorator import decorator
 
 
 class OverrideSettings(object):
@@ -10,11 +9,10 @@ class OverrideSettings(object):
         self.__old = None
 
     def __call__(self, f):
-        @wraps(f)
-        def decorated(*args, **kwargs):
+        def wrapper(f, *args, **kwargs):
             with self:
                 return f(*args, **kwargs)
-        return decorated
+        return decorator(wrapper, f)
 
     def __enter__(self):
         self.enable()

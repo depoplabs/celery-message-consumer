@@ -24,7 +24,7 @@ jobs:
       - run:
           command: |
             . venv/bin/activate
-            tox -e py27-dj14-cel3,py27-dj14-cel4,py27-dj111-cel3,py27-dj111-cel4
+            tox -e py27-dj14-cel3,py27-dj111-cel3,py27-dj111-cel4
       - store_artifacts:
           path: /tmp/results
           destination: python-2.7

@@ -30,18 +30,18 @@ function, in much the same way as you would a Celery task:
 
 .. code:: python
 
-    from event_consumer import message_handler
+    from myproject.celery_app import app
 
-    @message_handler('my.routing.key')
+    @app.message_handler('my.routing.key')
     def process_message(body):
         # `body` has been deserialized for us by the Celery worker
         print(body)
 
-    @message_handler(['my.routing.key1', 'my.routing.key2'])
+    @app.message_handler(['my.routing.key1', 'my.routing.key2'])
     def process_messages(body):
         # you can register handler for multiple routing keys
 
-    @message_handler('my.routing.*')
+    @app.message_handler('my.routing.*')
     def process_all_messages(body):
         # or wildcard routing keys, if using a 'topic' exchange
 
@@ -54,21 +54,21 @@ messages matching the routing key.
 Celery
 ~~~~~~
 
-Elsewhere in your code you will need to instantiate a Celery app and
-apply our custom 'ConsumerStep' which hooks our message handlers into
-the worker. If you are already using Celery *as Celery* in your project
-then you probably want separate Celery apps for tasks and for the
-message consumer.
+Elsewhere in your code you will need to instantiate a Celery app using our
+custom ``EventConsumerApp`` class which hooks our message handlers into the
+worker. If you are already using Celery *as Celery* in your project then you
+probably want separate Celery apps for tasks and for the message consumer.
 
 .. code:: python
 
     from celery import Celery
-    from event_consumer.handlers import AMQPRetryConsumerStep
+    from event_consumer import EventConsumerApp
 
     main_app = Celery()
+    main_app.config_from_object('celeryconfig')
 
-    consumer_app = Celery()
-    consumer_app.steps['consumer'].add(AMQPRetryConsumerStep)
+    consumer_app = EventConsumerApp()
+    consumer_app.config_from_object('consumer_celeryconfig')
 
 You likely will want separate config for each app. See
 `Celery docs <http://docs.celeryproject.org/en/latest/userguide/application.html#configuration>`__.
@@ -83,7 +83,7 @@ would, attaching to the consumer app:
 
 .. code:: bash
 
-    bin/celery worker -A myproject.mymodule:consumer_app
+    bin/celery worker -A myproject.celery_apps:consumer_app
 
 Configuration
 ~~~~~~~~~~~~~
