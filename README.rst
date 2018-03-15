@@ -26,6 +26,11 @@ can fail.
 Usage
 -----
 
+.. code:: bash
+
+    pip install celery-message-consumer
+
+
 Handlers
 ~~~~~~~~
 
