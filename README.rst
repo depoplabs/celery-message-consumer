@@ -1,7 +1,11 @@
 celery-message-consumer
 =======================
 
-|Build Status|
+|PyPI Version| |Build Status|
+
+.. |PyPI Version| image:: http://img.shields.io/pypi/v/celery-message-consumer.svg?style=flat
+   :target: https://pypi.python.org/pypi/celery-message-consumer/
+   :alt: Latest PyPI version
 
 .. |Build Status| image:: https://circleci.com/gh/depop/celery-message-consumer.svg?style=shield&circle-token=a9ea2909c5cbc4cb32a87f50444ca79b99e3b09c
     :alt: Build Status

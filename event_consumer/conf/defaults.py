@@ -1,6 +1,6 @@
 from datetime import timedelta
 import os
-from typing import Callable, Dict, List, Optional  # noqa
+from typing import Callable, Dict, Optional  # noqa
 
 
 # namespace for config keys loaded from e.g. Django conf or env vars
