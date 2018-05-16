@@ -45,9 +45,9 @@ def _validate_registration(register_key):  # type: (QueueRegistration) -> None
     if (register_key.queue, register_key.exchange) in existing:
         raise InvalidQueueRegistration(
             'Attempted duplicate registrations for messages with the queue name '
-            '"{0}" and exchange "{1}"'.format(
-                register_key.queue,
-                register_key.exchange,
+            '"{queue}" and exchange "{exchange}"'.format(
+                queue=register_key.queue,
+                exchange=register_key.exchange,
             )
         )
 
@@ -231,9 +231,9 @@ class AMQPRetryHandler(object):
             )
 
             self.retry_queue = kombu.Queue(
-                name='{0}.retry'.format(queue),
+                name='{queue}.retry'.format(queue=queue),
                 exchange=self.exchanges[DEFAULT_EXCHANGE],
-                routing_key='{0}.retry'.format(queue),
+                routing_key='{queue}.retry'.format(queue=queue),
                 # N.B. default exchange automatically routes messages to a queue
                 # with the same name as the routing key provided.
                 queue_arguments={
@@ -244,9 +244,9 @@ class AMQPRetryHandler(object):
             )
 
             self.archive_queue = kombu.Queue(
-                name='{0}.archived'.format(queue),
+                name='{queue}.archived'.format(queue=queue),
                 exchange=self.exchanges[DEFAULT_EXCHANGE],
-                routing_key='{0}.archived'.format(queue),
+                routing_key='{queue}.archived'.format(queue=queue),
                 queue_arguments={
                     "x-expires": settings.ARCHIVE_EXPIRY,  # Messages dropped after this
                     "x-max-length": 1000000,  # Maximum size of the queue
@@ -256,10 +256,10 @@ class AMQPRetryHandler(object):
             )
         except KeyError as key_exc:
             raise NoExchange(
-                "The exchange {0} was not found in settings.EXCHANGES. \n"
-                "settings.EXCHANGES = {1}".format(
-                    key_exc,
-                    settings.EXCHANGES
+                "The exchange {exchange} was not found in settings.EXCHANGES.\n"
+                "settings.EXCHANGES = {exchanges}".format(
+                    exchange=key_exc,
+                    exchanges=settings.EXCHANGES
                 )
             )
 
@@ -302,10 +302,12 @@ class AMQPRetryHandler(object):
         retry_count = self.retry_count(message)
 
         try:
-            _logger.debug('Received: (key={}, retry_count={})'.format(
-                self.routing_key,
-                retry_count,
-            ))
+            _logger.debug(
+                'Received: (key={routing_key}, retry_count={retry_count})'.format(
+                    routing_key=self.routing_key,
+                    retry_count=retry_count,
+                )
+            )
             self.func(body)
 
         except Exception as e:
@@ -313,38 +315,47 @@ class AMQPRetryHandler(object):
                 self.archive(
                     body,
                     message,
-                    "Task '{}' raised '{}, {}'\n{}".format(
-                        self.routing_key,
-                        e.__class__.__name__,
-                        e,
-                        traceback.format_exc(),
+                    "Task '{routing_key}' raised '{cls}, {error}'\n"
+                    "{traceback}".format(
+                        routing_key=self.routing_key,
+                        cls=e.__class__.__name__,
+                        error=e,
+                        traceback=traceback.format_exc(),
                     )
                 )
             elif retry_count >= settings.MAX_RETRIES:
                 self.archive(
                     body,
                     message,
-                    "Task '{}' ran out of retries on exception '{}, {}'\n{}".format(
-                        self.routing_key,
-                        e.__class__.__name__,
-                        e,
-                        traceback.format_exc(),
+                    "Task '{routing_key}' ran out of retries ({retries}) on exception "
+                    "'{cls}, {error}'\n"
+                    "{traceback}".format(
+                        routing_key=self.routing_key,
+                        retries=retry_count,
+                        cls=e.__class__.__name__,
+                        error=e,
+                        traceback=traceback.format_exc(),
                     )
                 )
             else:
                 self.retry(
                     body,
                     message,
-                    "Task '{}' raised the exception '{}, {}', but there are retries left\n{}".format(
-                        self.routing_key,
-                        e.__class__.__name__,
-                        e,
-                        traceback.format_exc(),
+                    "Task '{routing_key}' raised the exception '{cls}, {error}', but there are "
+                    "{retries} retries left\n"
+                    "{traceback}".format(
+                        routing_key=self.routing_key,
+                        retries=settings.MAX_RETRIES - retry_count,
+                        cls=e.__class__.__name__,
+                        error=e,
+                        traceback=traceback.format_exc(),
                     )
                 )
         else:
             message.ack()
-            _logger.debug("Task '{}' processed and ack() sent".format(self.routing_key))
+            _logger.debug(
+                "Task '{routing_key}' processed and ack() sent".format(routing_key=self.routing_key)
+            )
 
         finally:
             if settings.USE_DJANGO:
@@ -355,9 +366,9 @@ class AMQPRetryHandler(object):
             if not message.acknowledged:
                 message.requeue()
                 _logger.critical(
-                    "Messages for task '{}' are not sending an ack() or a reject(). "
+                    "Messages for task '{routing_key}' are not sending an ack() or a reject(). "
                     "This needs attention. Assuming some kind of error and requeueing the "
-                    "message.".format(self.routing_key)
+                    "message.".format(routing_key=self.routing_key)
                 )
 
     def retry(self, body, message, reason=''):
@@ -381,22 +392,25 @@ class AMQPRetryHandler(object):
         except Exception as e:
             message.requeue()
             _logger.error(
-                "Retry failure: retry-reason='{}' exception='{}, {}'\n{}".format(
-                    reason,
-                    e.__class__.__name__,
-                    e,
-                    traceback.format_exc(),
+                "Retry failure: retry-reason='{reason}' "
+                "exception='{cls}, {error}'\n"
+                "{traceback}".format(
+                    reason=reason,
+                    cls=e.__class__.__name__,
+                    error=e,
+                    traceback=traceback.format_exc(),
                 )
             )
 
         else:
             message.ack()
-            _logger.debug("Retry: {}".format(reason))
+            _logger.debug("Retry: {reason}".format(reason=reason))
 
     def archive(self, body, message, reason=''):
         """
         Put the message onto the archive queue
         """
+        _logger.warning(reason)
         try:
             self.archive_producer.publish(
                 body,
@@ -408,16 +422,18 @@ class AMQPRetryHandler(object):
         except Exception as e:
             message.requeue()
             _logger.error(
-                "Archive failure: retry-reason='{}' exception='{}, {}'\n{}".format(
-                    reason,
-                    e.__class__.__name__,
-                    e,
-                    traceback.format_exc(),
+                "Archive failure: retry-reason='{reason}' "
+                "exception='{cls}, {error}'\n"
+                "{traceback}".format(
+                    reason=reason,
+                    cls=e.__class__.__name__,
+                    error=e,
+                    traceback=traceback.format_exc(),
                 )
             )
         else:
             message.ack()
-            _logger.debug("Archive: {}".format(reason))
+            _logger.debug("Archive: {reason}".format(reason=reason))
 
     def declare_queues(self):
         queues = [self.worker_queue, self.retry_queue, self.archive_queue]
