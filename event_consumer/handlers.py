@@ -124,6 +124,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             _validate_registration(register_key)
 
             REGISTRY[register_key] = f
+            _logger.debug('registered: %s to handler: %s.%s', register_key, f.__module__, f.__name__)
 
         return f
 
@@ -155,6 +156,7 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
         for handler in self.handlers:
             handler.declare_queues()
             handler.consumer.consume()
+            _logger.debug('AMQPRetryConsumerStep: Started handler: %s', handler)
 
     def stop(self, c):
         self._close(c, True)
@@ -282,6 +284,21 @@ class AMQPRetryHandler(object):
             queues=[self.worker_queue],
             callbacks=[self],
             accept=settings.ACCEPT,
+        )
+
+    def __repr__(self):
+        return (
+            "AMQPRetryHandler("
+            "routing_key={routing_key}, "
+            "queue={queue}, "
+            "exchange={exchange}, "
+            "func={func.__module__}.{func.__name__}"
+            ")".format(
+                 routing_key=self.routing_key,
+                 queue=self.queue,
+                 exchange=self.exchange,
+                 func=self.func,
+            )
         )
 
     def __call__(self, body, message):
