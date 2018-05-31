@@ -1,10 +1,12 @@
 import mock
 import pytest
 
+from flexisettings.utils import override_settings
+
 from event_consumer import message_handler
 from event_consumer import handlers as ec
+from event_consumer.conf import settings
 from event_consumer.errors import InvalidQueueRegistration
-from event_consumer.test_utils.override import override_settings
 from event_consumer.types import QueueRegistration
 
 
@@ -42,7 +44,7 @@ def test_get_handlers_with_defaults():
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
-@override_settings(QUEUE_NAME_PREFIX='myapp:')
+@override_settings(settings, QUEUE_NAME_PREFIX='myapp:')
 def test_get_handlers_queue_prefix(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
@@ -87,7 +89,7 @@ def test_get_handlers_queue_prefix(*mocks):
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
-@override_settings(EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
+@override_settings(settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_queue_and_exchange(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
@@ -182,7 +184,7 @@ def test_get_handlers_same_queue_name_and_exchange():
             assert handler.consumer.callbacks[0].func is reg[key]
 
 
-@override_settings(EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
+@override_settings(settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_multiple_routes(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
