@@ -19,10 +19,10 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
 
             f1 = message_handler('my.routing.key1')(
-                mock.MagicMock()
+                mock.MagicMock(__name__='mock_handler1')
             )
             f2 = message_handler('my.routing.key2')(
-                mock.MagicMock()
+                mock.MagicMock(__name__='mock_handler2')
             )
 
             assert len(reg) == 2
@@ -68,7 +68,7 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
             # we have to use a named exchange to be able to bind a custom queue name
             f1 = message_handler('my.routing.key1', queue='custom_queue', exchange='custom')(
-                mock.MagicMock()
+                mock.MagicMock(__name__='mock_handler1')
             )
 
             assert len(reg) == 1
@@ -107,7 +107,7 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
 
             f1 = message_handler('my.routing.*', exchange='custom')(
-                mock.MagicMock()
+                mock.MagicMock(__name__='mock_handler1')
             )
 
             assert len(reg) == 1
@@ -153,7 +153,7 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
                 ['my.routing.key1', 'my.routing.key2'],
                 exchange='custom',
             )
-            f1 = decorator(mock.MagicMock())
+            f1 = decorator(mock.MagicMock(__name__='mock_handler1'))
 
             assert len(reg) == 2
 
