@@ -27,8 +27,16 @@ MAX_RETRIES = 4  # type: int
 BACKOFF_FUNC = None  # type: Optional[Callable[[int], float]]
 
 RETRY_HEADER = 'x-retry-count'
-# to generate TTL header for archived message (milliseconds)
+
+# to set TTL for archived message (milliseconds)
 ARCHIVE_EXPIRY = int(timedelta(days=24).total_seconds() * 1000)  # type: int
+# max size of archive queue before dropping messages
+ARCHIVE_MAX_LENGTH = 1000000  # type: int
+ARCHIVE_QUEUE_ARGS = {
+    "x-message-ttl": ARCHIVE_EXPIRY,  # Messages dropped after this
+    "x-max-length": ARCHIVE_MAX_LENGTH,  # Maximum size of the queue
+    "x-queue-mode": "lazy",  # Keep messages on disk (reqs. rabbitmq 3.6.0+)
+}
 
 
 USE_DJANGO = False
