@@ -54,7 +54,8 @@ def _validate_registration(register_key):  # type: (QueueRegistration) -> None
 
 def message_handler(routing_keys,  # type: Union[str, Iterable]
                     queue=None,  # type: Optional[str]
-                    exchange=DEFAULT_EXCHANGE  # type: str
+                    exchange=DEFAULT_EXCHANGE,  # type: str
+                    **kwargs
                     ):
     # type: (...) ->  Callable[[Callable], Any]
     """
@@ -78,6 +79,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             default queue name without prepending `QUEUE_NAME_PREFIX`.
         exchange: The AMQP exchange config to use. This is a *key name*
             in the `settings.EXCHANGES` dict.
+        queue_arguments: Arbitrary arguments to be passed to the *primary* queue at creation time.
 
     Returns:
         Callable: function decorator
@@ -120,7 +122,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             # kombu.Consumer has no concept of routing-key (only queue name) so
             # so handler registrations must be unique on queue+exchange (otherwise
             # messages from the queue would be randomly sent to the duplicate handlers)
-            register_key = QueueRegistration(routing_key, queue_name, exchange)
+            register_key = QueueRegistration(routing_key, queue_name, exchange, kwargs.get('queue_arguments', {}))
             _validate_registration(register_key)
 
             REGISTRY[register_key] = f
@@ -181,6 +183,7 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
                 queue_registration.routing_key,
                 queue_registration.queue,
                 queue_registration.exchange,
+                queue_registration.queue_arguments,
                 func,
                 backoff_func=settings.BACKOFF_FUNC,
             )
@@ -203,6 +206,7 @@ class AMQPRetryHandler(object):
                  routing_key,  # type: str
                  queue,  # type: str
                  exchange,  # type: str
+                 queue_arguments, #type: Dict[str, str]
                  func,  # type: Callable[[Any], Any]
                  backoff_func=None  # type: Optional[Callable[[int], float]]
                  ):
@@ -230,6 +234,7 @@ class AMQPRetryHandler(object):
                 exchange=self.exchanges[exchange],
                 routing_key=self.routing_key,
                 channel=self.channel,
+                queue_arguments=queue_arguments,
             )
 
             self.retry_queue = kombu.Queue(

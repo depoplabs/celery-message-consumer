@@ -1,8 +1,8 @@
-from typing import NamedTuple
+from typing import NamedTuple, Dict
 
 
 # Used by handlers.REGISTRY as keys
 QueueRegistration = NamedTuple(
     'QueueRegistration',
-    [('routing_key', str), ('queue', str), ('exchange', str)]
+    [('routing_key', str), ('queue', str), ('exchange', str), ('queue_arguments', Dict[str, str])]
 )
