@@ -7,7 +7,7 @@ pypi:
 	make tag
 
 tag:
-	git tag $$(python -c "from event_consumer.__about__ import __version__; print __version__")
+	git tag $$(python event_consumer/__about__.py)
 	git push --tags
 
 test:

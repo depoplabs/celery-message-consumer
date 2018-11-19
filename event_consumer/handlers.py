@@ -249,11 +249,7 @@ class AMQPRetryHandler(object):
                 name='{queue}.archived'.format(queue=queue),
                 exchange=self.exchanges[DEFAULT_EXCHANGE],
                 routing_key='{queue}.archived'.format(queue=queue),
-                queue_arguments={
-                    "x-expires": settings.ARCHIVE_EXPIRY,  # Messages dropped after this
-                    "x-max-length": 1000000,  # Maximum size of the queue
-                    "x-queue-mode": "lazy",  # Keep messages on disk (reqs. rabbitmq 3.6.0+)
-                },
+                queue_arguments=settings.ARCHIVE_QUEUE_ARGS,
                 channel=self.channel,
             )
         except KeyError as key_exc:
