@@ -20,7 +20,7 @@ import kombu.common as common
 
 from event_consumer.conf import settings
 from event_consumer.errors import InvalidQueueRegistration, NoExchange, PermanentFailure
-from event_consumer.types import QueueRegistration
+from event_consumer.types import HandlerRegistration, QueueKey
 
 if settings.USE_DJANGO:
     from django.core.signals import request_finished
@@ -30,19 +30,18 @@ _logger = logging.getLogger(__name__)
 
 
 # Maps routing-keys to handlers
-REGISTRY = {}  # type: Dict[QueueRegistration, Callable]
+REGISTRY = {}  # type: Dict[QueueKey, HandlerRegistration]
 
 DEFAULT_EXCHANGE = 'default'
 
 
-def _validate_registration(register_key):  # type: (QueueRegistration) -> None
+def _validate_registration(register_key):  # type: (QueueKey) -> None
     """
     Raises:
         InvalidQueueRegistration
     """
     global REGISTRY
-    existing = {(r.queue, r.exchange) for r in REGISTRY.keys()}
-    if (register_key.queue, register_key.exchange) in existing:
+    if register_key in REGISTRY:
         raise InvalidQueueRegistration(
             'Attempted duplicate registrations for messages with the queue name '
             '"{queue}" and exchange "{exchange}"'.format(
@@ -55,7 +54,7 @@ def _validate_registration(register_key):  # type: (QueueRegistration) -> None
 def message_handler(routing_keys,  # type: Union[str, Iterable]
                     queue=None,  # type: Optional[str]
                     exchange=DEFAULT_EXCHANGE,  # type: str
-                    **kwargs
+                    queue_arguments=None,  # Optional[Dict[str, object]]
                     ):
     # type: (...) ->  Callable[[Callable], Any]
     """
@@ -79,7 +78,8 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             default queue name without prepending `QUEUE_NAME_PREFIX`.
         exchange: The AMQP exchange config to use. This is a *key name*
             in the `settings.EXCHANGES` dict.
-        queue_arguments: Arbitrary arguments to be passed to the *primary* queue at creation time.
+        queue_arguments: Arbitrary arguments to be passed to the *primary* queue
+            at creation time.
 
     Returns:
         Callable: function decorator
@@ -113,6 +113,8 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
                 "separate handlers for each routing key in this case."
             )
 
+    queue_arguments = queue_arguments or {}
+
     def decorator(f):  # type: (Callable) -> Callable
         global REGISTRY
 
@@ -122,11 +124,22 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
             # kombu.Consumer has no concept of routing-key (only queue name) so
             # so handler registrations must be unique on queue+exchange (otherwise
             # messages from the queue would be randomly sent to the duplicate handlers)
-            register_key = QueueRegistration(routing_key, queue_name, exchange, kwargs.get('queue_arguments', {}))
+            register_key = QueueKey(queue=queue_name, exchange=exchange)
             _validate_registration(register_key)
 
-            REGISTRY[register_key] = f
-            _logger.debug('registered: %s to handler: %s.%s', register_key, f.__module__, f.__name__)
+            handler_registration = HandlerRegistration(
+                routing_key=routing_key,
+                queue_arguments=queue_arguments,
+                handler=f,
+            )
+            REGISTRY[register_key] = handler_registration
+
+            _logger.debug(
+                'registered: %s to handler: %s.%s',
+                register_key,
+                f.__module__,
+                f.__name__
+            )
 
         return f
 
@@ -148,7 +161,7 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
 
     def __init__(self, *args, **kwargs):
         self.handlers = []  # type: List[AMQPRetryHandler]
-        self._tasks = kwargs.pop('tasks', REGISTRY)  # type: Dict[QueueRegistration, Callable]
+        self._tasks = kwargs.pop('tasks', REGISTRY)  # type: Dict[QueueKey, HandlerRegistration]
         super(AMQPRetryConsumerStep, self).__init__(*args, **kwargs)
 
     def start(self, c):
@@ -179,15 +192,15 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
     def get_handlers(self, channel):
         return [
             AMQPRetryHandler(
-                channel,
-                queue_registration.routing_key,
-                queue_registration.queue,
-                queue_registration.exchange,
-                queue_registration.queue_arguments,
-                func,
+                channel=channel,
+                routing_key=handler_registration.routing_key,
+                queue=queue_key.queue,
+                exchange=queue_key.exchange,
+                queue_arguments=handler_registration.queue_arguments,
+                func=handler_registration.handler,
                 backoff_func=settings.BACKOFF_FUNC,
             )
-            for queue_registration, func in self._tasks.items()
+            for queue_key, handler_registration in self._tasks.items()
         ]
 
 
@@ -206,7 +219,7 @@ class AMQPRetryHandler(object):
                  routing_key,  # type: str
                  queue,  # type: str
                  exchange,  # type: str
-                 queue_arguments, #type: Dict[str, str]
+                 queue_arguments,  # type: Dict[str, str]
                  func,  # type: Callable[[Any], Any]
                  backoff_func=None  # type: Optional[Callable[[int], float]]
                  ):
