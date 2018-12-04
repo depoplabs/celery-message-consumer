@@ -41,6 +41,7 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
             routing_key=self.routing_key,
             queue=self.routing_key,
             exchange=self.exchange,
+            queue_arguments={},
             func=lambda body: None,
             backoff_func=lambda attempt: 0,
         )
