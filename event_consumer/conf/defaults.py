@@ -28,6 +28,9 @@ BACKOFF_FUNC = None  # type: Optional[Callable[[int], float]]
 
 RETRY_HEADER = 'x-retry-count'
 
+# Set the consumer prefetch limit
+PREFETCH_COUNT = 1
+
 # to set TTL for archived message (milliseconds)
 ARCHIVE_EXPIRY = int(timedelta(days=24).total_seconds() * 1000)  # type: int
 # max size of archive queue before dropping messages

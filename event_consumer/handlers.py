@@ -300,6 +300,8 @@ class AMQPRetryHandler(object):
             accept=settings.ACCEPT,
         )
 
+        self.consumer.qos(prefetch_count=settings.PREFETCH_COUNT)
+
     def __repr__(self):
         return (
             "AMQPRetryHandler("
