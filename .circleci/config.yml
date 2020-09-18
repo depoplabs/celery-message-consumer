@@ -24,7 +24,7 @@ jobs:
       - run:
           command: |
             . venv/bin/activate
-            tox -e py27-dj14-cel3,py27-dj14-cel4,py27-dj111-cel3,py27-dj111-cel4
+            tox -e py27-dj111-cel3,py27-dj111-cel4
       - store_artifacts:
           path: /tmp/results
           destination: python-2.7
@@ -52,10 +52,66 @@ jobs:
       - run:
           command: |
             . venv/bin/activate
-            tox -e py36-dj111-cel3,py36-dj111-cel4
+            tox -e py36-dj111-cel3,py36-dj111-cel4,py36-dj22-cel3,py36-dj22-cel4
       - store_artifacts:
           path: /tmp/results
           destination: python-3.6
+
+  "python-3.7":
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          - EVENT_CONSUMER_APP_CONFIG: test_app.settings
+          - BROKER_HOST: localhost
+      - image: circleci/rabbitmq:3.6.6
+    steps:
+      - checkout
+      - restore_cache:
+          key: py37-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
+      - run:
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install tox
+      - save_cache:
+          key: py37-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
+          paths:
+            - "venv"
+      - run:
+          command: |
+            . venv/bin/activate
+            tox -e py37-dj22-cel3,py37-dj22-cel4
+      - store_artifacts:
+          path: /tmp/results
+          destination: python-3.7
+
+  "python-3.8":
+    docker:
+      - image: circleci/python:3.8
+        environment:
+          - EVENT_CONSUMER_APP_CONFIG: test_app.settings
+          - BROKER_HOST: localhost
+      - image: circleci/rabbitmq:3.6.6
+    steps:
+      - checkout
+      - restore_cache:
+          key: py38-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
+      - run:
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install tox
+      - save_cache:
+          key: py38-{{ .Branch }}-{{ checksum "requirements-base.txt" }}-{{ checksum "tox.ini" }}
+          paths:
+            - "venv"
+      - run:
+          command: |
+            . venv/bin/activate
+            tox -e py38-dj22-cel3,py38-dj22-cel4
+      - store_artifacts:
+          path: /tmp/results
+          destination: python-3.8
 
 workflows:
   version: 2
@@ -63,3 +119,5 @@ workflows:
     jobs:
       - "python-2.7"
       - "python-3.6"
+      - "python-3.7"
+      - "python-3.8"
