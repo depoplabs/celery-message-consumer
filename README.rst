@@ -186,7 +186,7 @@ Briefly: for each routing key it listens to, the consumer sets up
 Compatibility
 -------------
 
-Python 2.7 and 3.6 are both supported.
+Python 2.7 and 3.6-3.8 are both supported.
 
 **Only** RabbitMQ transport is supported.
 
