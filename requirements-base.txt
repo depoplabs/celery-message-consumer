@@ -1,3 +1,3 @@
 git+https://github.com/depop/python-flexisettings.git@1.0.0#egg=flexisettings
-typing>=3.6.2,<4.0
+typing>=3.6.2,<4.0; python_version < '3.6'
 six
