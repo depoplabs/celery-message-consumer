@@ -186,7 +186,7 @@ Briefly: for each routing key it listens to, the consumer sets up
 Compatibility
 -------------
 
-Python 2.7 and 3.6 are both supported.
+Python 2.7 and 3.6-3.8 are both supported.
 
 **Only** RabbitMQ transport is supported.
 
@@ -201,10 +201,12 @@ This must be enabled if required via the ``settings.USE_DJANGO`` flag.
 This project is tested against:
 
 =========== ============ ============= ================== ==================
-     x       Django 1.4   Django 1.11   Celery/Kombu 3.x   Celery/Kombu 4.x
+     x       Django 1.11  Django 2.2    Celery/Kombu 3.x   Celery/Kombu 4.x
 =========== ============ ============= ================== ==================
-Python 2.7       *             *                *                  *
-Python 3.6                     *                *                  *                     
+Python 2.7       *                              *                  *
+Python 3.6       *             *                *                  *                     
+Python 3.7                     *                *                  *                     
+Python 3.8                     *                *                  *                     
 =========== ============ ============= ================== ==================
 
 Running the tests
