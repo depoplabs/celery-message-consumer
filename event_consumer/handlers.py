@@ -257,6 +257,7 @@ class AMQPRetryHandler(object):
                 # N.B. default exchange automatically routes messages to a queue
                 # with the same name as the routing key provided.
                 queue_arguments={
+                    **queue_arguments,
                     "x-dead-letter-exchange": "",
                     "x-dead-letter-routing-key": self.queue,
                 },
@@ -267,7 +268,10 @@ class AMQPRetryHandler(object):
                 name='{queue}.archived'.format(queue=queue),
                 exchange=self.exchanges[DEFAULT_EXCHANGE],
                 routing_key='{queue}.archived'.format(queue=queue),
-                queue_arguments=settings.ARCHIVE_QUEUE_ARGS,
+                queue_arguments={
+                    **queue_arguments,
+                    **settings.ARCHIVE_QUEUE_ARGS,
+                },
                 channel=self.channel,
             )
         except KeyError as key_exc:
