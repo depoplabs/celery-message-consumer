@@ -264,14 +264,18 @@ class AMQPRetryHandler(object):
                 channel=self.channel,
             )
 
+            archive_queue_arguments = {
+                **queue_arguments,
+                **settings.ARCHIVE_QUEUE_ARGS,
+            }
+            if archive_queue_arguments.get('x-queue-type') == 'quorum':
+                del archive_queue_arguments['x-message-ttl']
+
             self.archive_queue = kombu.Queue(
                 name='{queue}.archived'.format(queue=queue),
                 exchange=self.exchanges[DEFAULT_EXCHANGE],
                 routing_key='{queue}.archived'.format(queue=queue),
-                queue_arguments={
-                    **queue_arguments,
-                    **settings.ARCHIVE_QUEUE_ARGS,
-                },
+                queue_arguments=archive_queue_arguments,
                 channel=self.channel,
             )
         except KeyError as key_exc:
