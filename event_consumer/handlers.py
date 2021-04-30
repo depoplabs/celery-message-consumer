@@ -269,7 +269,8 @@ class AMQPRetryHandler(object):
                 **settings.ARCHIVE_QUEUE_ARGS,
             }
             if archive_queue_arguments.get('x-queue-type') == 'quorum':
-                del archive_queue_arguments['x-message-ttl']
+                'x-message-ttl' in archive_queue_arguments and archive_queue_arguments.pop('x-message-ttl')
+                'x-queue-mode' in archive_queue_arguments and archive_queue_arguments.pop('x-queue-mode')
 
             self.archive_queue = kombu.Queue(
                 name='{queue}.archived'.format(queue=queue),
