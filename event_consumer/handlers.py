@@ -8,6 +8,7 @@ loaded by the bin/celery worker itself, according to usual mechanism.
 """
 import logging
 import traceback
+from threading import Timer
 
 import six
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union  # noqa
@@ -171,6 +172,8 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
         for handler in self.handlers:
             handler.declare_queues()
             handler.consumer.consume()
+            if handler.retry_consumer:
+                handler.retry_consumer.consume()
             _logger.debug('AMQPRetryConsumerStep: Started handler: %s', handler)
 
     def stop(self, c):
@@ -311,6 +314,27 @@ class AMQPRetryHandler(object):
 
         self.consumer.qos(prefetch_count=settings.PREFETCH_COUNT)
 
+        if queue_arguments.get('x-queue-type') == 'quorum':
+            self.producer = kombu.Producer(
+                channel,
+                exchange=self.worker_queue.exchange,
+                routing_key=self.worker_queue.routing_key,
+                serializer=settings.SERIALIZER,
+            )
+
+            self.retry_consumer = kombu.Consumer(
+                channel,
+                queues=[self.retry_queue],
+                callbacks=[self.retry_consume],
+                accept=settings.ACCEPT,
+            )
+
+            self.retry_consumer.qos(prefetch_count=settings.PREFETCH_COUNT)
+
+        else:
+            self.retry_consumer = None
+            self.producer = None
+
     def __repr__(self):
         return (
             "AMQPRetryHandler("
@@ -412,6 +436,33 @@ class AMQPRetryHandler(object):
                     "This needs attention. Assuming some kind of error and requeueing the "
                     "message.".format(routing_key=self.routing_key)
                 )
+
+    def retry_consume(self, body, message):
+        def requeue():
+            try:
+                self.producer.publish(
+                    body,
+                    headers=message.headers,
+                    retry=True,
+                )
+
+            except Exception as e:
+                message.requeue()
+                _logger.error(
+                    "Requeue failure:"
+                    "exception='{cls}, {error}'\n"
+                    "{traceback}".format(
+                        cls=e.__class__.__name__,
+                        error=e,
+                        traceback=traceback.format_exc(),
+                    )
+                )
+
+            else:
+                message.ack()
+
+        timer = Timer(int(message.properties.get('expiration', 0)) / 1000, requeue)
+        timer.start()
 
     def retry(self, body, message, reason=''):
         """
