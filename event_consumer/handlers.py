@@ -289,20 +289,6 @@ class AMQPRetryHandler(object):
                 )
             )
 
-        self.retry_producer = kombu.Producer(
-            channel,
-            exchange=self.retry_queue.exchange,
-            routing_key=self.retry_queue.routing_key,
-            serializer=settings.SERIALIZER,
-        )
-
-        self.archive_producer = kombu.Producer(
-            channel,
-            exchange=self.archive_queue.exchange,
-            routing_key=self.archive_queue.routing_key,
-            serializer=settings.SERIALIZER,
-        )
-
         self.consumer = kombu.Consumer(
             channel,
             queues=[self.worker_queue],
@@ -425,7 +411,12 @@ class AMQPRetryHandler(object):
             headers.update({
                 settings.RETRY_HEADER: retry_count + 1
             })
-            self.retry_producer.publish(
+            kombu.Producer(
+                self.channel,
+                exchange=self.retry_queue.exchange,
+                routing_key=self.retry_queue.routing_key,
+                serializer=settings.SERIALIZER,
+            ).publish(
                 body,
                 headers=headers,
                 retry=True,
@@ -455,7 +446,12 @@ class AMQPRetryHandler(object):
         """
         _logger.warning(reason)
         try:
-            self.archive_producer.publish(
+            kombu.Producer(
+                self.channel,
+                exchange=self.archive_queue.exchange,
+                routing_key=self.archive_queue.routing_key,
+                serializer=settings.SERIALIZER,
+            ).publish(
                 body,
                 headers=message.headers,
                 retry=True,
