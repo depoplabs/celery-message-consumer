@@ -1,13 +1,12 @@
 import mock
 import pytest
 
-from flexisettings.utils import override_settings
-
 from event_consumer import message_handler
 from event_consumer import handlers as ec
-from event_consumer.conf import settings
 from event_consumer.errors import InvalidQueueRegistration
 from event_consumer.types import QueueKey
+from unittest.mock import patch
+
 
 
 def test_get_handlers_with_defaults():
@@ -51,7 +50,6 @@ def test_get_handlers_with_defaults():
             assert handler.consumer.callbacks[0].func is reg[key].handler
 
 
-@override_settings(settings, QUEUE_NAME_PREFIX='myapp:')
 def test_get_handlers_queue_prefix(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
@@ -60,7 +58,10 @@ def test_get_handlers_queue_prefix(*mocks):
     with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
 
         # named exchange is required if using QUEUE_NAME_PREFIX
-        with pytest.raises(InvalidQueueRegistration):
+        with (
+            pytest.raises(InvalidQueueRegistration),
+            patch('event_consumer.handlers.settings.QUEUE_NAME_PREFIX', 'myapp:')
+        ):
             @message_handler('my.routing.key1')
             def bad(body):
                 return None
@@ -103,13 +104,15 @@ def test_get_handlers_queue_prefix(*mocks):
             assert handler.consumer.callbacks[0].func is reg[key].handler
 
 
-@override_settings(settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_queue_and_exchange(*mocks):
     """
     Should build handlers from tasks decorated with `@message_handler`
     using the specified routing key, queue and exchange
     """
-    with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
+    with (
+        mock.patch.object(ec, 'REGISTRY', new=dict()) as reg,
+        patch('event_consumer.handlers.settings.EXCHANGES', {'my.exchange1': {}, 'my.exchange2': {}})
+    ):
 
         # named exchange is required if using custom queue name
         with pytest.raises(InvalidQueueRegistration):
@@ -250,7 +253,6 @@ def test_get_handlers_same_queue_name_and_exchange():
             assert handler.consumer.callbacks[0].func is reg[key].handler
 
 
-@override_settings(settings, EXCHANGES={'my.exchange1': {}, 'my.exchange2': {}})
 def test_get_handlers_with_multiple_routes(*mocks):
     """
     Can connect the handler to multiple routing keys, each having a queue.
@@ -258,7 +260,10 @@ def test_get_handlers_with_multiple_routes(*mocks):
     with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
 
         # custom queue name is not possible with multiple routes, even with named exchange
-        with pytest.raises(InvalidQueueRegistration):
+        with (
+            pytest.raises(InvalidQueueRegistration),
+            patch('event_consumer.handlers.settings.EXCHANGES', {'my.exchange1': {}, 'my.exchange2': {}})
+        ):
             @message_handler(['my.routing.key1', 'my.routing.key2'], 'my.queue1', 'my.exchange1')
             def bad(body):
                 return None

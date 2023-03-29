@@ -1,12 +1,8 @@
 -r requirements.txt
 
-tox>=2.0
 pytest
 mock
 flaky
-
-# note for Django 1.4 you will need specific versions of these
-# (see tox.ini)
 pytest-django
 factory-boy
 django

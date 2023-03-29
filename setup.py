@@ -41,7 +41,6 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
     install_requires=[
-        'flexisettings>=1.0,<1.1',
         'typing>=3.6.2,<4.0; python_version < "3.6"',
         'six',
     ],

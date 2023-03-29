@@ -2,5 +2,4 @@
 
 ipython
 ipdb
-robpol86-pytest-ipdb
 twine
