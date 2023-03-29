@@ -23,17 +23,25 @@ MAX_RETRIES: int = getattr(settings, f"{CONFIG_NAMESPACE}_MAX_RETRIES", 4)
 
 # By default will use `AMQPRetryHandler.backoff`, otherwise supply your own.
 # Should accept a single arg <retry number> and return a delay time (seconds).
-BACKOFF_FUNC: Optional[Callable[[int], float]] = getattr(settings, f"{CONFIG_NAMESPACE}_BACKOFF_FUNC", None)
+BACKOFF_FUNC: Optional[Callable[[int], float]] = getattr(
+    settings, f"{CONFIG_NAMESPACE}_BACKOFF_FUNC", None
+)
 
-RETRY_HEADER: str = getattr(settings, f"{CONFIG_NAMESPACE}_RETRY_HEADER", 'x-retry-count')
+RETRY_HEADER: str = getattr(
+    settings, f"{CONFIG_NAMESPACE}_RETRY_HEADER", 'x-retry-count'
+)
 
 # Set the consumer prefetch limit
 PREFETCH_COUNT: int = getattr(settings, f"{CONFIG_NAMESPACE}_PREFETCH_COUNT", 1)
 
 # to set TTL for archived message (milliseconds)
 twenty_four_days = int(timedelta(days=24).total_seconds() * 1000)
-ARCHIVE_EXPIRY: int = getattr(settings, f"{CONFIG_NAMESPACE}_ARCHIVE_EXPIRY", twenty_four_days)
-ARCHIVE_MAX_LENGTH: int = getattr(settings, f"{CONFIG_NAMESPACE}_ARCHIVE_MAX_LENGTH", 1000000)
+ARCHIVE_EXPIRY: int = getattr(
+    settings, f"{CONFIG_NAMESPACE}_ARCHIVE_EXPIRY", twenty_four_days
+)
+ARCHIVE_MAX_LENGTH: int = getattr(
+    settings, f"{CONFIG_NAMESPACE}_ARCHIVE_MAX_LENGTH", 1000000
+)
 ARCHIVE_QUEUE_ARGS = {
     "x-message-ttl": ARCHIVE_EXPIRY,  # Messages dropped after this
     "x-max-length": ARCHIVE_MAX_LENGTH,  # Maximum size of the queue
@@ -43,7 +51,9 @@ ARCHIVE_QUEUE_ARGS = {
 
 USE_DJANGO: bool = getattr(settings, f"{CONFIG_NAMESPACE}_USE_DJANGO", False)
 
-EXCHANGES: dict[str, dict[str, str]] = getattr(settings, f"{CONFIG_NAMESPACE}_EXCHANGES", {})
+EXCHANGES: dict[str, dict[str, str]] = getattr(
+    settings, f"{CONFIG_NAMESPACE}_EXCHANGES", {}
+)
 # EXCHANGES = {
 #     'default': {  # a reference name for this config, used when attaching handlers
 #         'name': 'data',  # actual name of exchange in RabbitMQ

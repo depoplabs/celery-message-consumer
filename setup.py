@@ -16,20 +16,15 @@ with open(path.join(here, 'event_consumer', '__about__.py'), 'r', 'utf-8') as f:
 
 setup(
     name='celery-message-consumer',
-
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
     version=about['__version__'],
-
     description='Tool for using the bin/celery worker to consume vanilla AMQP messages (i.e. not Celery tasks)',
     long_description=long_description,
-
     url='https://github.com/depop/celery-message-consumer',
-
     author='Depop',
     author_email='dev@depop.com',
-
     license='Apache 2.0',
     classifiers=[
         'Environment :: Web Environment',
@@ -42,7 +37,6 @@ setup(
     install_requires=[
         'six==1.16.0',
     ],
-
     packages=[
         'event_consumer',
         'event_consumer.conf',

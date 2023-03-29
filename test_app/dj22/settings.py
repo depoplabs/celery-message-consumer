@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+
 BASE_DIR = os.path.dirname(__file__)
 
 MANAGE_PY_PATH = os.path.join(BASE_DIR, 'manage.py')
@@ -62,7 +63,7 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         'TEST': {
             'NAME': os.path.join(BASE_DIR, 'test_db.sqlite3'),
-        }
+        },
     }
 }
 

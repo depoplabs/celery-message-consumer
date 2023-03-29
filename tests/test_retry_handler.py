@@ -9,7 +9,6 @@ from .base import BaseRetryHandlerIntegrationTest
 
 
 class AMQPRetryHandlerIntegrationTest(BaseRetryHandlerIntegrationTest):
-
     def test_wrapped_func(self):
         """Should run the wrapped function when a message arrives with its routing key"""
         with mock.patch.object(self.handler, 'func') as f:
@@ -26,7 +25,9 @@ class AMQPRetryHandlerIntegrationTest(BaseRetryHandlerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e = exc
-            self.assertIsNotNone(e, msg="e=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e, msg="e=None here means task was unexpectedly retried"
+            )
             f.call_count = 1
 
     def test_wrapped_func_raises_exception(self):
@@ -51,8 +52,7 @@ class AMQPRetryHandlerIntegrationTest(BaseRetryHandlerIntegrationTest):
             archived_body, archived_message = self.archives[0]
             self.assertEqual(body, archived_body)
             self.assertEqual(
-                archived_message.headers[settings.RETRY_HEADER],
-                settings.MAX_RETRIES
+                archived_message.headers[settings.RETRY_HEADER], settings.MAX_RETRIES
             )
             self.assertEqual(f.call_count, expected_attempts)
 
