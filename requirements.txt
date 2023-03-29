@@ -1,4 +1,4 @@
 -r requirements-base.txt
 
-celery
-kombu
+celery==5.2.7
+kombu==5.2.4

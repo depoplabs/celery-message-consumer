@@ -116,7 +116,8 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with (mock.patch.object(ec, 'REGISTRY', new=dict()) as reg, 
+        with (
+            mock.patch.object(ec, 'REGISTRY', new=dict()) as reg, 
             patch('event_consumer.handlers.settings.EXCHANGES', {
                 'custom': {
                     'name': 'custom',

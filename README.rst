@@ -183,8 +183,6 @@ Briefly: for each routing key it listens to, the consumer sets up
 Compatibility
 -------------
 
-Python 2.7 and 3.6-3.8 are both supported.
-
 **Only** RabbitMQ transport is supported.
 
 We depend on Celery and Kombu. Their versioning seems to be loosely in
@@ -195,16 +193,6 @@ Django is not required, but when used we have some extra integration
 which is needed if your event handlers use the Django db connection.
 This must be enabled if required via the ``settings.USE_DJANGO`` flag.
 
-This project is tested against:
-
-=========== ============ ============= ================== ==================
-     x       Django 1.11  Django 2.2    Celery/Kombu 3.x   Celery/Kombu 4.x
-=========== ============ ============= ================== ==================
-Python 2.7       *                              *                  *
-Python 3.6       *             *                *                  *                     
-Python 3.7                     *                *                  *                     
-Python 3.8                     *                *                  *                     
-=========== ============ ============= ================== ==================
 
 Running the tests
 -----------------
@@ -223,7 +211,7 @@ provided.
 .. code:: bash
 
     docker-compose up -d
-    export BROKER_HOST=$(docker-machine ip default)
+    export BROKER_HOST=0.0.0.0
 
 (adjust the last line to suit your local Docker installation)
 
@@ -233,19 +221,12 @@ The ``rabbitmqadmin`` web UI is available to aid in debugging queue issues:
 
     http://{BROKER_HOST}:15672/
 
-Now decide which version combination from the matrix you're going to
-test and set up your virtualenv accordingly:
 
-.. code:: bash
-
-    pyenv virtualenv 3.6.2 celery-message-consumer
-
-You will need to edit ``requirements.txt`` and ``requirements-test.txt``
-for the specific versions of dependencies you want to test against. Then
+You will need to create a virtualenv then
 you can install everything via:
 
 .. code:: bash
-
+    pyenv virtualenv 3.11.1 celery-message-consumer
     pip install -r requirements-test.txt
 
 Set an env to point to the target Django version's settings in the test
@@ -261,48 +242,3 @@ Now we can run the tests:
 .. code:: bash
 
     PYTHONPATH=. py.test -v -s --pdb tests/
-
-tox (all version combinations for current Python)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We can run tests against the matrix dependency versions using ``tox``.
-
-There are `some warts <https://github.com/pyenv/pyenv-virtualenv/issues/202#issuecomment-339624649>`__
-around using ``tox`` with ``pyenv-virtualenv`` so if you created a Python 3.6
-virtualenv using the instructions above the best thing to do is delete it and
-recreate it like this:
-
-.. code:: bash
-
-    pyenv virtualenv -p python3.6 myenv
-    pip install tox
-
-(it's actually easier not to use a virtualenv at all - tox creates its
-own virtualenvs anyway, but that does mean you'd have to install tox
-globally)
-
-You need the Docker container running:
-
-.. code:: bash
-
-    docker-compose up -d
-    export BROKER_HOST=$(docker-machine ip default)
-
-You can now run tests for any versions compatible with your virtualenv
-python version, e.g.
-
-.. code:: bash
-
-    tox -e py36-dj111-cel4
-
-To run the full version matrix you need to have both Python 2.7 and 3.6. The
-easiest way is via ``pyenv``. You will also need to make both Python versions
-'global' (or 'local') via pyenv, and then install and run ``tox`` outside of
-any virtualenv.
-
-.. code:: bash
-
-    source deactivate
-    pyenv global 2.7.14 3.6.2
-    pip install tox
-    tox
