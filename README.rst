@@ -1,14 +1,11 @@
 celery-message-consumer
 =======================
 
-|PyPI Version| |Build Status|
+|PyPI Version|
 
 .. |PyPI Version| image:: http://img.shields.io/pypi/v/celery-message-consumer.svg?style=flat
    :target: https://pypi.python.org/pypi/celery-message-consumer/
    :alt: Latest PyPI version
-
-.. |Build Status| image:: https://circleci.com/gh/depop/celery-message-consumer.svg?style=shield&circle-token=a9ea2909c5cbc4cb32a87f50444ca79b99e3b09c
-    :alt: Build Status
 
 Tool for using the ``bin/celery`` worker to consume vanilla AMQP
 messages (i.e. not Celery tasks)
@@ -212,24 +209,6 @@ Python 3.8                     *                *                  *
 Running the tests
 -----------------
 
-CircleCI
-~~~~~~~~
-
-| The easiest way to test the full version matrix is to install the
-  CircleCI command line app:
-| https://circleci.com/docs/2.0/local-jobs/
-| (requires Docker)
-
-The cli does not support 'workflows' at the moment so you have to run
-the two Python version jobs separately:
-
-.. code:: bash
-
-    circleci build --job python-2.7
-
-.. code:: bash
-
-    circleci build --job python-3.6
 
 py.test (single combination of dependency versions)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -286,8 +265,7 @@ Now we can run the tests:
 tox (all version combinations for current Python)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You'll notice in the CircleCI config we run tests against the matrix
-dependency versions using ``tox``.
+We can run tests against the matrix dependency versions using ``tox``.
 
 There are `some warts <https://github.com/pyenv/pyenv-virtualenv/issues/202#issuecomment-339624649>`__
 around using ``tox`` with ``pyenv-virtualenv`` so if you created a Python 3.6
