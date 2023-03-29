@@ -7,6 +7,7 @@ from event_consumer import message_handler
 from event_consumer import handlers as ec
 
 from .base import BaseConsumerIntegrationTest
+from unittest.mock import patch
 
 
 class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
@@ -65,12 +66,23 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
+
+
+        with (
+            mock.patch.object(ec, 'REGISTRY', new=dict()) as reg,
+            patch('event_consumer.handlers.settings.EXCHANGES', {
+                    'custom': {
+                        'name': 'custom',
+                        'type': 'topic',
+                        }
+                    }
+                ),
+            ):
             # we have to use a named exchange to be able to bind a custom queue name
             f1 = message_handler('my.routing.key1', queue='custom_queue', exchange='custom')(
                 mock.MagicMock(__name__='mock_handler1')
             )
-
+            
             assert len(reg) == 1
 
             self.configure_handlers()
@@ -104,7 +116,15 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
+        with (mock.patch.object(ec, 'REGISTRY', new=dict()) as reg, 
+            patch('event_consumer.handlers.settings.EXCHANGES', {
+                'custom': {
+                    'name': 'custom',
+                    'type': 'topic',
+                    }
+                }
+            )     
+        ):
 
             f1 = message_handler('my.routing.*', exchange='custom')(
                 mock.MagicMock(__name__='mock_handler1')
@@ -147,8 +167,16 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
-
+        with (
+            mock.patch.object(ec, 'REGISTRY', new=dict()) as reg,
+            patch('event_consumer.handlers.settings.EXCHANGES', {
+                'custom': {
+                    'name': 'custom',
+                    'type': 'topic',
+                    }
+                }
+            )
+        ):
             decorator = message_handler(
                 ['my.routing.key1', 'my.routing.key2'],
                 exchange='custom',

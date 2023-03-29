@@ -60,48 +60,55 @@ def test_get_handlers_queue_prefix(*mocks):
         # named exchange is required if using QUEUE_NAME_PREFIX
         with (
             pytest.raises(InvalidQueueRegistration),
-            patch('event_consumer.handlers.settings.QUEUE_NAME_PREFIX', 'myapp:')
+            patch('event_consumer.handlers.settings.QUEUE_NAME_PREFIX', 'myapp:'),
+            patch('event_consumer.handlers.settings.EXCHANGES', {
+                'custom': {
+                    'name': 'custom',
+                    'type': 'topic',
+                    }
+                }
+            )
         ):
             @message_handler('my.routing.key1')
             def bad(body):
                 return None
 
-        @message_handler('my.routing.key1', exchange='custom')
-        def f1(body):
-            return None
+            @message_handler('my.routing.key1', exchange='custom')
+            def f1(body):
+                return None
 
-        @message_handler('my.routing.key2', exchange='custom')
-        def f2(body):
-            return None
+            @message_handler('my.routing.key2', exchange='custom')
+            def f2(body):
+                return None
 
-        assert len(reg) == 2
+            assert len(reg) == 2
 
-        handler_reg1 = reg[
-            QueueKey(queue='myapp:my.routing.key1', exchange='custom')
-        ]
-        assert handler_reg1.handler is f1
-        assert handler_reg1.routing_key == 'my.routing.key1'
-        assert handler_reg1.queue_arguments == {}
+            handler_reg1 = reg[
+                QueueKey(queue='myapp:my.routing.key1', exchange='custom')
+            ]
+            assert handler_reg1.handler is f1
+            assert handler_reg1.routing_key == 'my.routing.key1'
+            assert handler_reg1.queue_arguments == {}
 
-        handler_reg2 = reg[
-            QueueKey(queue='myapp:my.routing.key2', exchange='custom')
-        ]
-        assert handler_reg2.handler is f2
-        assert handler_reg2.routing_key == 'my.routing.key2'
-        assert handler_reg2.queue_arguments == {}
+            handler_reg2 = reg[
+                QueueKey(queue='myapp:my.routing.key2', exchange='custom')
+            ]
+            assert handler_reg2.handler is f2
+            assert handler_reg2.routing_key == 'my.routing.key2'
+            assert handler_reg2.queue_arguments == {}
 
-        step = ec.AMQPRetryConsumerStep(None)
-        handlers = step.get_handlers(channel=mock.MagicMock())
+            step = ec.AMQPRetryConsumerStep(None)
+            handlers = step.get_handlers(channel=mock.MagicMock())
 
-        assert len(handlers) == len(reg)
+            assert len(handlers) == len(reg)
 
-        for handler in handlers:
-            assert isinstance(handler, ec.AMQPRetryHandler)
-            assert len(handler.consumer.queues) == 1
-            assert len(handler.consumer.callbacks) == 1
-            assert isinstance(handler.consumer.callbacks[0], ec.AMQPRetryHandler)
-            key = QueueKey(queue=handler.queue, exchange=handler.exchange)
-            assert handler.consumer.callbacks[0].func is reg[key].handler
+            for handler in handlers:
+                assert isinstance(handler, ec.AMQPRetryHandler)
+                assert len(handler.consumer.queues) == 1
+                assert len(handler.consumer.callbacks) == 1
+                assert isinstance(handler.consumer.callbacks[0], ec.AMQPRetryHandler)
+                key = QueueKey(queue=handler.queue, exchange=handler.exchange)
+                assert handler.consumer.callbacks[0].func is reg[key].handler
 
 
 def test_get_handlers_with_queue_and_exchange(*mocks):
@@ -219,8 +226,16 @@ def test_get_handlers_same_queue_name_and_exchange():
     """
     Attempt to attach handler with same queue name + exchange should fail.
     """
-    with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
-
+    with (
+        mock.patch.object(ec, 'REGISTRY', new=dict()) as reg,
+        patch('event_consumer.handlers.settings.EXCHANGES', {
+            'custom': {
+                'name': 'custom',
+                'type': 'topic',
+                }
+            }
+        )
+    ):
         @message_handler('my.routing.key1', queue='custom_queue', exchange='custom')
         def f1(body):
             return None
