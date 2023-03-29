@@ -15,7 +15,6 @@ def random_body():
 
 
 class BaseRetryHandlerIntegrationTest(unittest.TestCase):
-
     # Must not collide with real queue names!
     routing_key = 'RetryHandlerIntegrationTest'
     exchange = 'default'  # see settings.EXCHANGES
@@ -58,7 +57,7 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
         self.archive_consumer = kombu.Consumer(
             channel=self.channel,
             queues=[self.handler.archive_queue],
-            callbacks=[self.handle_archive]
+            callbacks=[self.handle_archive],
         )
 
         for consumer in [self.handler.consumer, self.archive_consumer]:
@@ -68,7 +67,7 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
             self.channel,
             exchange=self.handler.exchanges[self.handler.exchange],
             routing_key=self.routing_key,
-            serializer='json'
+            serializer='json',
         )
         self.archives = []
 
@@ -101,7 +100,6 @@ class BaseRetryHandlerIntegrationTest(unittest.TestCase):
 
 
 class BaseConsumerIntegrationTest(unittest.TestCase):
-
     exchange = 'default'  # see settings.EXCHANGES
 
     body = staticmethod(random_body)
@@ -170,12 +168,10 @@ class BaseConsumerIntegrationTest(unittest.TestCase):
             handler.channel,
             exchange=handler.exchanges[handler.exchange],
             routing_key=handler.routing_key if routing_key is None else routing_key,
-            serializer='json'
+            serializer='json',
         )
 
     def get_handlers_for_key(self, routing_key):
         return [
-            handler
-            for handler in self.handlers
-            if handler.routing_key == routing_key
+            handler for handler in self.handlers if handler.routing_key == routing_key
         ]

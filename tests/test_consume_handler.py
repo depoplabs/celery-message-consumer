@@ -7,17 +7,16 @@ from event_consumer import message_handler
 from event_consumer import handlers as ec
 
 from .base import BaseConsumerIntegrationTest
+from unittest.mock import patch
 
 
 class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
-
     @flaky(max_runs=5, min_passes=5)
     def test_consume_basic(self):
         """
         Should run the wrapped function when a message arrives with its routing key.
         """
         with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
-
             f1 = message_handler('my.routing.key1')(
                 mock.MagicMock(__name__='mock_handler1')
             )
@@ -53,7 +52,9 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e = exc
-            self.assertIsNotNone(e, msg="e=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e, msg="e=None here means task was unexpectedly retried"
+            )
             # no further calls
             f1.call_count = 1
             f2.call_count = 1
@@ -65,11 +66,23 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
+
+        with (
+            mock.patch.object(ec, 'REGISTRY', new=dict()) as reg,
+            patch(
+                'event_consumer.handlers.settings.EXCHANGES',
+                {
+                    'custom': {
+                        'name': 'custom',
+                        'type': 'topic',
+                    }
+                },
+            ),
+        ):
             # we have to use a named exchange to be able to bind a custom queue name
-            f1 = message_handler('my.routing.key1', queue='custom_queue', exchange='custom')(
-                mock.MagicMock(__name__='mock_handler1')
-            )
+            f1 = message_handler(
+                'my.routing.key1', queue='custom_queue', exchange='custom'
+            )(mock.MagicMock(__name__='mock_handler1'))
 
             assert len(reg) == 1
 
@@ -93,7 +106,9 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e = exc
-            self.assertIsNotNone(e, msg="e=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e, msg="e=None here means task was unexpectedly retried"
+            )
             # no further calls
             f1.call_count = 1
 
@@ -104,8 +119,15 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
-
+        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg, patch(
+            'event_consumer.handlers.settings.EXCHANGES',
+            {
+                'custom': {
+                    'name': 'custom',
+                    'type': 'topic',
+                }
+            },
+        ):
             f1 = message_handler('my.routing.*', exchange='custom')(
                 mock.MagicMock(__name__='mock_handler1')
             )
@@ -136,7 +158,9 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e = exc
-            self.assertIsNotNone(e, msg="e=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e, msg="e=None here means task was unexpectedly retried"
+            )
             # no further calls
             f1.call_count = 2
 
@@ -147,8 +171,15 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
         Test that we can connect multiple routing keys on the same queue and the
         appropriate handler will be called in each case.
         """
-        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg:
-
+        with mock.patch.object(ec, 'REGISTRY', new=dict()) as reg, patch(
+            'event_consumer.handlers.settings.EXCHANGES',
+            {
+                'custom': {
+                    'name': 'custom',
+                    'type': 'topic',
+                }
+            },
+        ):
             decorator = message_handler(
                 ['my.routing.key1', 'my.routing.key2'],
                 exchange='custom',
@@ -182,6 +213,8 @@ class ConsumeMessageHandlerTest(BaseConsumerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e = exc
-            self.assertIsNotNone(e, msg="e=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e, msg="e=None here means task was unexpectedly retried"
+            )
             # no further calls
             f1.call_count = 2

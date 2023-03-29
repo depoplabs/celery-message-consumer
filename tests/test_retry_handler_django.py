@@ -22,7 +22,6 @@ except AttributeError:
 
 @pytest.mark.django_db(transaction=True)
 class DjangoDBTransactionIntegrationTest(BaseRetryHandlerIntegrationTest):
-
     def setUp(self):
         self.addCleanup(cleanup)
         super(DjangoDBTransactionIntegrationTest, self).setUp()
@@ -60,7 +59,9 @@ class DjangoDBTransactionIntegrationTest(BaseRetryHandlerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e1 = exc
-            self.assertIsNotNone(e1, msg="e1=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e1, msg="e1=None here means task was unexpectedly retried"
+            )
             f.call_count = 1
 
         with mock.patch.object(self.handler, 'func') as f:
@@ -93,7 +94,9 @@ class DjangoDBTransactionIntegrationTest(BaseRetryHandlerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e2 = exc
-            self.assertIsNotNone(e2, msg="e2=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e2, msg="e2=None here means task was unexpectedly retried"
+            )
             f.call_count = 1
 
         self.assertEqual(len(User.objects.all()), 3)
@@ -132,7 +135,9 @@ class DjangoDBTransactionIntegrationTest(BaseRetryHandlerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e1 = exc
-            self.assertIsNotNone(e1, msg="e1=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e1, msg="e1=None here means task was unexpectedly retried"
+            )
             f.call_count = 1
 
         with mock.patch.object(self.handler, 'func') as f:
@@ -165,7 +170,9 @@ class DjangoDBTransactionIntegrationTest(BaseRetryHandlerIntegrationTest):
                 self.connection.drain_events(timeout=0.3)
             except socket.timeout as exc:
                 e2 = exc
-            self.assertIsNotNone(e2, msg="e2=None here means task was unexpectedly retried")
+            self.assertIsNotNone(
+                e2, msg="e2=None here means task was unexpectedly retried"
+            )
             f.call_count = 1
 
         self.assertEqual(len(User.objects.all()), 3)

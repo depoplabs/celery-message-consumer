@@ -7,7 +7,7 @@ QueueKey = NamedTuple(
     [
         ('queue', str),
         ('exchange', str),
-    ]
+    ],
 )
 
 
@@ -17,5 +17,5 @@ HandlerRegistration = NamedTuple(
         ('routing_key', str),
         ('queue_arguments', Dict[str, str]),
         ('handler', Callable),
-    ]
+    ],
 )

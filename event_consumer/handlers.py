@@ -51,11 +51,12 @@ def _validate_registration(register_key):  # type: (QueueKey) -> None
         )
 
 
-def message_handler(routing_keys,  # type: Union[str, Iterable]
-                    queue=None,  # type: Optional[str]
-                    exchange=DEFAULT_EXCHANGE,  # type: str
-                    queue_arguments=None,  # Optional[Dict[str, object]]
-                    ):
+def message_handler(
+    routing_keys,  # type: Union[str, Iterable]
+    queue=None,  # type: Optional[str]
+    exchange=DEFAULT_EXCHANGE,  # type: str
+    queue_arguments=None,  # Optional[Dict[str, object]]
+):
     # type: (...) ->  Callable[[Callable], Any]
     """
     Register a function as a handler for messages on a rabbitmq exchange with
@@ -96,8 +97,9 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
     In order for the event handler to be registered, its containing module must
     be imported before starting the AMQPRetryConsumerStep.
     """
-    if (queue or (queue is None and settings.QUEUE_NAME_PREFIX)) \
-            and exchange not in settings.EXCHANGES:
+    if (
+        queue or (queue is None and settings.QUEUE_NAME_PREFIX)
+    ) and exchange not in settings.EXCHANGES:
         raise InvalidQueueRegistration(
             "You must use a named exchange from settings.EXCHANGES "
             "if you want to bind a custom queue name."
@@ -119,7 +121,9 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
         global REGISTRY
 
         for routing_key in routing_keys:
-            queue_name = (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
+            queue_name = (
+                (settings.QUEUE_NAME_PREFIX + routing_key) if queue is None else queue
+            )
 
             # kombu.Consumer has no concept of routing-key (only queue name) so
             # so handler registrations must be unique on queue+exchange (otherwise
@@ -138,7 +142,7 @@ def message_handler(routing_keys,  # type: Union[str, Iterable]
                 'registered: %s to handler: %s.%s',
                 register_key,
                 f.__module__,
-                f.__name__
+                f.__name__,
             )
 
         return f
@@ -157,11 +161,13 @@ class AMQPRetryConsumerStep(bootsteps.StartStopStep):
     See http://docs.celeryproject.org/en/latest/userguide/extending.html
     """
 
-    requires = ('celery.worker.consumer:Connection', )
+    requires = ('celery.worker.consumer:Connection',)
 
     def __init__(self, *args, **kwargs):
         self.handlers = []  # type: List[AMQPRetryHandler]
-        self._tasks = kwargs.pop('tasks', REGISTRY)  # type: Dict[QueueKey, HandlerRegistration]
+        self._tasks = kwargs.pop(
+            'tasks', REGISTRY
+        )  # type: Dict[QueueKey, HandlerRegistration]
         super(AMQPRetryConsumerStep, self).__init__(*args, **kwargs)
 
     def start(self, c):
@@ -214,15 +220,16 @@ class AMQPRetryHandler(object):
     backoff on retries.
     """
 
-    def __init__(self,
-                 channel,  # type: amqp.channel.Channel
-                 routing_key,  # type: str
-                 queue,  # type: str
-                 exchange,  # type: str
-                 queue_arguments,  # type: Dict[str, str]
-                 func,  # type: Callable[[Any], Any]
-                 backoff_func=None  # type: Optional[Callable[[int], float]]
-                 ):
+    def __init__(
+        self,
+        channel,  # type: amqp.channel.Channel
+        routing_key,  # type: str
+        queue,  # type: str
+        exchange,  # type: str
+        queue_arguments,  # type: Dict[str, str]
+        func,  # type: Callable[[Any], Any]
+        backoff_func=None,  # type: Optional[Callable[[int], float]]
+    ):
         # type: (...) -> None
         self.channel = channel
         self.routing_key = routing_key
@@ -231,14 +238,11 @@ class AMQPRetryHandler(object):
         self.func = func
         self.backoff_func = backoff_func or self.backoff
 
-        self.exchanges = {
-            DEFAULT_EXCHANGE: kombu.Exchange(channel=self.channel)
-        }
+        self.exchanges = {DEFAULT_EXCHANGE: kombu.Exchange(channel=self.channel)}
 
         for name, exchange_settings in settings.EXCHANGES.items():
             self.exchanges[name] = kombu.Exchange(
-                channel=self.channel,
-                **exchange_settings
+                channel=self.channel, **exchange_settings
             )
 
         try:
@@ -274,8 +278,7 @@ class AMQPRetryHandler(object):
             raise NoExchange(
                 "The exchange {exchange} was not found in settings.EXCHANGES.\n"
                 "settings.EXCHANGES = {exchanges}".format(
-                    exchange=key_exc,
-                    exchanges=settings.EXCHANGES
+                    exchange=key_exc, exchanges=settings.EXCHANGES
                 )
             )
 
@@ -310,10 +313,10 @@ class AMQPRetryHandler(object):
             "exchange={exchange}, "
             "func={func.__module__}.{func.__name__}"
             ")".format(
-                 routing_key=self.routing_key,
-                 queue=self.queue,
-                 exchange=self.exchange,
-                 func=self.func,
+                routing_key=self.routing_key,
+                queue=self.queue,
+                exchange=self.exchange,
+                func=self.func,
             )
         )
 
@@ -354,7 +357,7 @@ class AMQPRetryHandler(object):
                         cls=e.__class__.__name__,
                         error=e,
                         traceback=traceback.format_exc(),
-                    )
+                    ),
                 )
             elif retry_count >= settings.MAX_RETRIES:
                 self.archive(
@@ -368,7 +371,7 @@ class AMQPRetryHandler(object):
                         cls=e.__class__.__name__,
                         error=e,
                         traceback=traceback.format_exc(),
-                    )
+                    ),
                 )
             else:
                 self.retry(
@@ -382,12 +385,14 @@ class AMQPRetryHandler(object):
                         cls=e.__class__.__name__,
                         error=e,
                         traceback=traceback.format_exc(),
-                    )
+                    ),
                 )
         else:
             message.ack()
             _logger.debug(
-                "Task '{routing_key}' processed and ack() sent".format(routing_key=self.routing_key)
+                "Task '{routing_key}' processed and ack() sent".format(
+                    routing_key=self.routing_key
+                )
             )
 
         finally:
@@ -412,15 +417,13 @@ class AMQPRetryHandler(object):
         try:
             retry_count = self.retry_count(message)
             headers = message.headers.copy()
-            headers.update({
-                settings.RETRY_HEADER: retry_count + 1
-            })
+            headers.update({settings.RETRY_HEADER: retry_count + 1})
             self.retry_producer.publish(
                 body,
                 headers=headers,
                 retry=True,
                 declares=[self.retry_queue],
-                expiration=self.backoff_func(retry_count)
+                expiration=self.backoff_func(retry_count),
             )
         except Exception as e:
             message.requeue()

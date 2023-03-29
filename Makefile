@@ -11,4 +11,4 @@ tag:
 	git push --tags
 
 test:
-	PYTHONPATH=. py.test -v -s --pdb tests/
+	PYTHONPATH=. py.test -v -s tests/

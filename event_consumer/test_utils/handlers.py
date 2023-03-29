@@ -43,9 +43,10 @@ class IntegrationTestHandlers(object):
 
 if settings.TEST_ENABLED:
     # Add tasks for interactive testing (call decorators directly)
-    message_handler('py.integration.ok')(
-        IntegrationTestHandlers.py_integration_ok)
+    message_handler('py.integration.ok')(IntegrationTestHandlers.py_integration_ok)
     message_handler('py.integration.raise')(
-        IntegrationTestHandlers.py_integration_raise)
+        IntegrationTestHandlers.py_integration_raise
+    )
     message_handler('py.integration.raise.permanent')(
-        IntegrationTestHandlers.py_integration_raise_permanent)
+        IntegrationTestHandlers.py_integration_raise_permanent
+    )
