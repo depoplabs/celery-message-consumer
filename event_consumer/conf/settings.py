@@ -42,12 +42,12 @@ ARCHIVE_EXPIRY: int = getattr(
 ARCHIVE_MAX_LENGTH: int = getattr(
     settings, f"{CONFIG_NAMESPACE}_ARCHIVE_MAX_LENGTH", 1000000
 )
-ARCHIVE_QUEUE_ARGS = {
+
+ARCHIVE_QUEUE_ARGS = getattr(settings, f"{CONFIG_NAMESPACE}_ARCHIVE_QUEUE_ARGS", {
     "x-message-ttl": ARCHIVE_EXPIRY,  # Messages dropped after this
     "x-max-length": ARCHIVE_MAX_LENGTH,  # Maximum size of the queue
     "x-queue-mode": "lazy",  # Keep messages on disk (reqs. rabbitmq 3.6.0+)
-}
-
+})
 
 USE_DJANGO: bool = getattr(settings, f"{CONFIG_NAMESPACE}_USE_DJANGO", False)
 
